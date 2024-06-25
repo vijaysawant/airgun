@@ -120,7 +120,7 @@ class NewHostDetailsView(BaseLoggedInView):
         @View.nested
         class details(Card):
             ROOT = './/article[.//div[text()="Details"]]'
-
+            edit = Text('.//div[@class="pf-c-description-list__group"]/dd//div[2]')
             details = HostDetailsCard()
 
             power_operations = OUIAButton('power-status-dropdown-toggle')
@@ -316,7 +316,9 @@ class NewHostDetailsView(BaseLoggedInView):
             ROOT = './/div[@id="packages-tab"]'
 
             select_all = Checkbox(locator='.//div[@id="selection-checkbox"]/div/label')
-            searchbar = SearchInput(locator='.//input[contains(@class, "pf-m-search")]')
+            searchbar = SearchInput(
+                locator='.//input[contains(@class, "pf-c-text-input-group__text-input")]'
+            )
             status_filter = Dropdown(locator='.//div[@aria-label="select Status container"]/div')
             upgrade = Pf4ActionsDropdown(locator='.//div[div/button[normalize-space(.)="Upgrade"]]')
             dropdown = Dropdown(locator='.//div[button[@aria-label="bulk_actions"]]')

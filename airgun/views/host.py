@@ -200,6 +200,20 @@ class HostInterface(View):
         return self.browser.wait_for_element(self.title, visible=True, exception=False) is not None
 
 
+class HostStatusesView(BaseLoggedInView):
+    title = Text("//h5[normalize-space(.)='Host Status Overview']")
+    status_green_total = Text("//div[contains(@class, 'status-count')][1]/a[1]")
+    status_green_owned = Text("//div[contains(@class, 'status-count')][1]/a[2]")
+    status_yellow_total = Text("//div[contains(@class, 'status-count')][2]/span[1]")
+    status_yellow_owned = Text("//div[contains(@class, 'status-count')][2]/span[2]")
+    status_red_total = Text("//div[contains(@class, 'status-count')][3]/a[1]")
+    status_red_owned = Text("//div[contains(@class, 'status-count')][3]/a[2]")
+
+    @property
+    def is_displayed(self):
+        return self.browser.wait_for_element(self.title, exception=False) is not None
+
+
 class HostsView(BaseLoggedInView, SearchableViewMixinPF4):
     title = Text("//h1[normalize-space(.)='Hosts']")
     manage_columns = PF4Button('manage-columns-button')
@@ -375,6 +389,7 @@ class HostCreateView(BaseLoggedInView):
         ptable = FilteredDropdown(id='host_ptable')
         disk = TextInput(id='host_disk')
         root_password = TextInput(id='host_root_pass')
+        disable_passwd = Text('//a[@id="disable-pass-btn"]')
 
     @View.nested
     class interfaces(SatTab):
@@ -541,7 +556,7 @@ class HostRegisterView(BaseLoggedInView):
         repository_gpg_key_url = TextInput(id='reg_gpg_key_url')
         token_life_time = TextInput(id='reg_token_life_time_input')
         rex_interface = TextInput(id='reg_rex_interface_input')
-        rex_pull_mode = FormSelect('OUIA-Generated-FormSelect-default-8')
+        rex_pull_mode = FormSelect('registration_setup_remote_execution_pull')
         ignore_error = Checkbox(id='reg_katello_ignore')
         force = Checkbox(id='reg_katello_force')
         install_packages_helper = Text("//div[@id='reg_packages-helper']")

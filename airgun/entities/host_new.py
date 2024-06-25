@@ -5,6 +5,7 @@ from wait_for import wait_for
 
 from airgun.entities.host import HostEntity
 from airgun.navigation import NavigateStep, navigator
+from airgun.views.fact import HostFactView
 from airgun.views.host_new import (
     AllAssignedRolesView,
     EditAnsibleRolesView,
@@ -18,10 +19,27 @@ from airgun.views.host_new import (
     ParameterDeleteDialog,
     RemediationView,
 )
+from airgun.views.hostgroup import HostGroupEditView
 from airgun.views.job_invocation import JobInvocationCreateView
 
 global available_param_types
 available_param_types = ['string', 'boolean', 'integer', 'real', 'array', 'hash', 'yaml', 'json']
+
+
+def navigate_to_edit_view(func):
+    def _decorator(self, entity_name=None, role_name=None):
+        view = self.navigate_to(self, 'NewDetails', entity_name=entity_name, role=role_name)
+        view.wait_displayed()
+        self.browser.plugin.ensure_page_safe()
+        view.overview.details.edit.click()
+        self.browser.switch_to_window(self.browser.window_handles[1])
+        host_group_view = HostGroupEditView(self.browser)
+        func(self, entity_name, role_name)
+        host_group_view.ansible_roles.submit.click()
+        self.browser.switch_to_window(self.browser.window_handles[0])
+        self.browser.close_window(self.browser.window_handles[1])
+
+    return _decorator
 
 
 class NewHostEntity(HostEntity):
@@ -46,6 +64,55 @@ class NewHostEntity(HostEntity):
         # Run this read twice to navigate to the page and load it before reading
         view.read(widget_names=widget_names)
         return view.read(widget_names=widget_names)
+
+    @navigate_to_edit_view
+    def assign_role_to_hostgroup(self, entity_name, role_name):
+        """Assign a single Ansible role from the host group based on user input
+
+        Args:
+            entity_name: Name of the host
+            role_name: Name of the ansible role
+        """
+        host_group_view = HostGroupEditView(self.browser)
+        host_group_view.ansible_roles.more_item.click()
+        host_group_view.ansible_roles.select_pages.click()
+        role_list = self.browser.elements(host_group_view.ansible_roles.available_role, parent=self)
+        for single_role in role_list[1:]:
+            if single_role.text.split(". ")[1] == role_name:
+                single_role.click()
+
+    @navigate_to_edit_view
+    def remove_hostgroup_role(self, entity_name, role_name):
+        """Remove a single Ansible role from the host group based on user input
+
+        Args:
+            entity_name: Name of the host
+            role_name: Name of the ansible role
+        """
+        host_group_view = HostGroupEditView(self.browser)
+        role_list = self.browser.elements(host_group_view.ansible_roles.assigned_role, parent=self)
+        for single_role in role_list[1:]:
+            if single_role.text.split(". ")[1] == role_name:
+                single_role.click()
+
+    @navigate_to_edit_view
+    def assign_all_role_to_hostgroup(self, entity_name, role_name=None):
+        """Assign all Ansible roles from the host group"""
+        host_group_view = HostGroupEditView(self.browser)
+        host_group_view.ansible_roles.more_item.click()
+        host_group_view.ansible_roles.select_pages.click()
+        role_list = self.browser.elements(host_group_view.ansible_roles.available_role, parent=self)
+        for single_role in role_list:
+            single_role.click()
+
+    @navigate_to_edit_view
+    def remove_all_role_from_hostgroup(self, entity_name, role_name=None):
+        """Remove all Ansible roles from the host group"""
+        host_group_view = HostGroupEditView(self.browser)
+        host_group_view.ansible_roles.click()
+        role_list = self.browser.elements(host_group_view.ansible_roles.assigned_role, parent=self)
+        for single_role in role_list:
+            single_role.click()
 
     def get_host_statuses(self, entity_name):
         """Read host statuses from Host Details page
@@ -259,6 +326,7 @@ class NewHostEntity(HostEntity):
         """Filter installed packages on host"""
         view = self.navigate_to(self, 'NewDetails', entity_name=entity_name)
         view.content.packages.select()
+        view.content.packages.table.wait_displayed()
         view.content.packages.searchbar.fill(search)
         # wait for filter to apply
         self.browser.plugin.ensure_page_safe()
@@ -291,6 +359,46 @@ class NewHostEntity(HostEntity):
         view.content.packages.table[0][5].widget.item_select(action)
         view.flash.assert_no_error()
         view.flash.dismiss()
+
+    def get_errata_table(
+        self,
+        entity_name,
+        installable=None,
+        severity=None,
+        search=None,
+        type=None,
+    ):
+        """Return the table of all errata entries, from Errata tab on selected host.
+        param: entity_name str: hostname to search for errata table
+
+        Optional: Filter by passing args (string):
+            param: installable str: filter errata by installability ('Yes' or 'No').
+            param: severity str: filter errata by severity.
+            param: search str: pass a search query to the searchbar, prior to reading.
+            param: type str: filter errata search by type.
+
+        note: all of the optional params being None, will result in no filtering.
+        """
+        view = self.navigate_to(self, 'NewDetails', entity_name=entity_name)
+        view.wait_displayed()
+        view.content.errata.select()
+        # optional: filter by params that are not None
+        if installable is not None:
+            assert installable == 'Yes' or 'No', (
+                'installable_filter expected None or str, "Yes" or "No".'
+                f' Got: {installable}, ({type(installable)}).'
+            )
+            view.content.errata.installable_filter.fill(installable)
+        if type is not None:
+            view.content.errata.type_filter.fill(type)
+        if severity is not None:
+            view.content.errata.severity_filter.fill(severity)
+        if search is not None:
+            view.content.errata.searchbar.fill(search)
+        # displayed the table with or without filters
+        view.content.errata.table.wait_displayed()
+        self.browser.plugin.ensure_page_safe()
+        return view.content.errata.table.read()
 
     def get_errata_by_type(self, entity_name, type):
         """List errata based on type and return table"""
@@ -842,6 +950,15 @@ class NewHostEntity(HostEntity):
         view.insights.remediate.click()
         view = RemediationView(self.browser)
         view.remediate.click()
+
+    def get_host_facts(self, entity_name):
+        view = self.navigate_to(self, 'NewDetails', entity_name=entity_name)
+        self.browser.plugin.ensure_page_safe()
+        view.wait_displayed()
+        self.browser.wait_for_element(view.dropdown, exception=False)
+        view.dropdown.item_select('Facts')
+        host_facts_view = HostFactView(self.browser)
+        return host_facts_view.table.read()
 
 
 @navigator.register(NewHostEntity, 'NewDetails')
