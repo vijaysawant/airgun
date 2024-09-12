@@ -1,6 +1,7 @@
 from widgetastic.widget import ConditionalSwitchableView, Table, Text, TextInput, View
 from widgetastic_patternfly import BreadCrumb
 from widgetastic_patternfly4 import Button as PF4Button, Pagination as PF4Pagination
+from widgetastic_patternfly4.ouia import Select as OUIASelect
 
 from airgun.views.common import BaseLoggedInView, SatTab, SearchableViewMixinPF4
 from airgun.widgets import (
@@ -130,9 +131,7 @@ class HostGroupCreateView(BaseLoggedInView):
     @View.nested
     class activation_keys(SatTab):
         TAB_NAME = 'Activation Keys'
-        activation_keys = ActivationKeyDropDown(
-            locator=".//foreman-react-component[contains(@data-props, 'kt_activation_keys')]"
-        )
+        activation_keys = OUIASelect('ak-select')
 
 
 class HostGroupEditView(HostGroupCreateView):
@@ -159,3 +158,4 @@ class HostGroupEditView(HostGroupCreateView):
         no_of_available_role = Text('//span[@class="pf-c-options-menu__toggle-text"]//b[2]')
         resources = MultiSelectNoFilter(id='ansible_roles')
         submit = Text('//input[@name="commit"]')
+        pagination = PF4Pagination()
