@@ -96,6 +96,7 @@ class CapsuleDetailsView(BaseLoggedInView):
         TAB_NAME = 'Overview'
 
         reclaim_space_button = Button('Reclaim Space')
+        reclaim_space_warning = Text('.//div[@id="properties"]/div/div/p[contains(., "Warning")]')
 
         url = Text('.//div[preceding-sibling::div[contains(., "URL")]]')
         version = Text('.//span[@class="proxy-version"]')
@@ -185,7 +186,12 @@ class CapsuleDetailsView(BaseLoggedInView):
         mid_content_table = ExpandableTable(
             component_id='expandable-content-views',
             column_widgets={
-                'cv_info_list': ItemsList(locator='//ul'),
+                0: Button(locator='./button[@aria-label="Details"]'),
+                'Content view': Text('./span/a'),
+                'Version': Text('./a'),
+                'Last published': Text('./span'),
+                'Synced': Text('./svg'),
+                5: Dropdown(locator='.//div[contains(@class, "pf-c-dropdown")]'),
             },
         )
 
