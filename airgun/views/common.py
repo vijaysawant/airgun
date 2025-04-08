@@ -326,6 +326,7 @@ class PF4LCECheckSelectorGroup(PF4LCESelectorGroup):
 
 class PF4LCEGroup(ParametrizedLocator):
     "Group of LCE indicators"
+
     ROOT = './/td and '
 
     PARAMETERS = ('lce_name',)
@@ -539,6 +540,7 @@ class TemplateEditor(View):
     rendering_options = ItemsList(".//div[contains(@class,'navbar-editor')]/ul")
     import_template = Button(id='import-btn')
     fullscreen = Button(id='fullscreen-btn')
+    error = Text(".//div[@id='preview_error_toast']")
     editor = ACEEditor()
 
 
@@ -681,7 +683,7 @@ class TemplateInputItem(GenericRemovableWidgetItem):
     remove_button = Text(".//a[contains(@class, 'remove_nested_fields')]")
     name = TextInput(locator=".//input[contains(@name, '[name]')]")
     required = Checkbox(locator=".//input[contains(@id, 'required')]")
-    input_type = FilteredDropdown(locator=".//div[contains(@id, 'input_type')]")
+    input_type = FilteredDropdown(locator=".//span[contains(@id, 'input_type')]")
 
     input_content = ConditionalSwitchableView(reference='input_type')
 

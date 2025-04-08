@@ -68,7 +68,7 @@ jobs:
       - name: Checkout from ${{ github.event.inputs.target_branch }} branch for auto-branching changes
         id: checkout-to-auto-branch
         run: |
-            branch_name="auto-branching-${{ github.event.inputs.target_branch }}-$(date '+%s')"
+            branch_name="auto-branching-${{ github.event.inputs.target_branch }}-$(date '+%s.%N')"
             git checkout -b "$branch_name"
             echo "branch_name=$branch_name" >> $GITHUB_OUTPUT
 
@@ -120,7 +120,7 @@ jobs:
 
       - name: Add the prt comment for running the sanity tests
         id: add-parent-prt-comment
-        uses: thollander/actions-comment-pull-request@v2
+        uses: thollander/actions-comment-pull-request@v3
         with:
           message: |
             trigger: test-robottelo
@@ -167,7 +167,7 @@ jobs:
         run: |
           git config --local user.email "Satellite-QE.satqe.com"
           git config --local user.name "Satellite-QE"
-          branch_name="auto-branching-${{ github.event.inputs.target_branch }}-$(date '+%s')"
+          branch_name="auto-branching-${{ github.event.inputs.target_branch }}-$(date '+%s.%N')"
           git checkout -b "$branch_name"
           git add ./.github/*
           git commit -m "Changes for ${{ github.event.inputs.target_branch }} new branch"
@@ -191,7 +191,7 @@ jobs:
 
       - name: Add the prt comment for running the sanity tests
         id: add-parent-prt-comment
-        uses: thollander/actions-comment-pull-request@v2
+        uses: thollander/actions-comment-pull-request@v3
         with:
           message: |
             trigger: test-robottelo

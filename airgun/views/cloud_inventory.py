@@ -12,9 +12,9 @@ from airgun.widgets import Accordion
 
 
 class InventoryTab(Tab):
-    """Cloud Inventory Upload Tab element.
+    """Insights Inventory Upload Tab element.
 
-    This is lightweight subclass needed because Cloud Inventory Upload
+    This is lightweight subclass needed because Insights Inventory Upload
     tabs contain icons, and widgetastic_patternfly Tab looks for exact match.
     """
 
@@ -29,7 +29,7 @@ class InventoryTab(Tab):
 
 
 class InventoryItemsView(Accordion):
-    """Item related to one organization on Cloud Inventory Upload page."""
+    """Item related to one organization on Insights Inventory Upload page."""
 
     ROOT = './/dl[contains(@class, "pf-c-accordion account-list")]'
     DESCRIPTION_LOCATOR = (
@@ -40,7 +40,7 @@ class InventoryItemsView(Accordion):
     @View.nested
     class generating(InventoryTab):
         process = Text('.//div[contains(@class, "tab-header")]/div[1]')
-        restart = Button('Restart')
+        restart = Button('Generate and upload report')
         terminal = Text(
             './/div[contains(@class, "report-generate")]//div[contains(@class, "terminal")]'
         )
@@ -103,18 +103,18 @@ class InventoryItemsView(Accordion):
 
 
 class CloudInventoryListView(BaseLoggedInView):
-    """Main RH Cloud Inventory Upload view."""
+    """Main Insights Inventory Upload view."""
 
     title = Text('//h1[normalize-space(.)="Red Hat Inventory"]')
     auto_update = Switch('.//label[@for="rh-cloud-switcher-allow_auto_inventory_upload"]')
     obfuscate_hostnames = Switch('.//label[@for="rh-cloud-switcher-obfuscate_inventory_hostnames"]')
     obfuscate_ips = Switch('.//label[@for="rh-cloud-switcher-obfuscate_inventory_ips"]')
     exclude_packages = Switch('.//label[@for="rh-cloud-switcher-exclude_installed_packages"]')
-    cloud_connector = Pf4Button(locator='//button[normalize-space(.)="Configure Cloud Connector"]')
+    cloud_connector = Pf4Button(locator='//button[normalize-space(.)="Configure cloud connector"]')
     reconfigure_cloud_connector = Pf4Button(
-        locator='//button[normalize-space(.)="Reconfigure Cloud Connector"]'
+        locator='//button[normalize-space(.)="Reconfigure cloud connector"]'
     )
-    sync_status = Pf4Button(locator='//button[normalize-space(.)="Sync inventory status"]')
+    sync_status = Pf4Button(locator='//button[normalize-space(.)="Sync all inventory status"]')
     inventory_list = View.nested(InventoryItemsView)
 
     @property

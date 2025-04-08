@@ -10,12 +10,15 @@ updates:
     schedule:
       interval: "daily"
     labels:
+      - '6.17.z'
       - '6.16.z'
       - "CherryPick"
       - "dependencies"
       - "6.15.z"
       - "6.14.z"
       - "6.13.z"
+    ignore:
+      - dependency-name: "selenium"
 
   # Maintain dependencies for our GitHub Actions
   - package-ecosystem: "github-actions"
@@ -23,6 +26,7 @@ updates:
     schedule:
       interval: "daily"
     labels:
+      - '6.17.z'
       - '6.16.z'
       - "CherryPick"
       - "dependencies"

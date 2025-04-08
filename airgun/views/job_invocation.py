@@ -1,5 +1,5 @@
 from wait_for import wait_for
-from widgetastic.widget import Text, TextInput, View
+from widgetastic.widget import Checkbox, Text, TextInput, View
 from widgetastic_patternfly import BreadCrumb
 from widgetastic_patternfly4 import Button, ChipGroup, DescriptionList, Radio, Select
 from widgetastic_patternfly4.donutchart import DonutCircle, DonutLegend
@@ -16,7 +16,7 @@ from airgun.views.common import (
     SearchableViewMixin,
     WizardStepView,
 )
-from airgun.widgets import ActionsDropdown
+from airgun.widgets import ActionsDropdown, ExpandableSection, PF4DataList
 
 
 class JobInvocationsView(BaseLoggedInView, SearchableViewMixin):
@@ -181,6 +181,17 @@ class JobInvocationStatusView(BaseLoggedInView):
             "//h2[contains(., 'Total hosts')]/span[@class='card-pf-aggregate-status-count']"
         )
 
+    @View.nested
+    class leapp_preupgrade_report(SatTab):
+        ROOT = '//div[@id="content"]//ul/li/a[contains(text(), "Leapp preupgrade report")][@href="#leapp_preupgrade_report"]'
+        TAB_NAME = 'Leapp preupgrade report'
+
+        leapp_report_title = Checkbox(
+            locator='//*[@id="preupgrade-report-entries-list-view"]//input[@type="checkbox"]'
+        )
+        fix_selected = Text('//*[@id="leapp_preupgrade_report"]//button[text()="Fix Selected"]')
+        run_upgrade = Text('//*[@id="leapp_preupgrade_report"]//button[text()="Run Upgrade"]')
+
     def wait_for_result(self, timeout=600, delay=1):
         """Wait for invocation job to finish"""
         wait_for(
@@ -265,3 +276,20 @@ class NewJobInvocationStatusView(BaseLoggedInView):
         def read(self):
             """Return `dict` without trailing ':' in the key names."""
             return {key.replace(':', ''): val for key, val in super().read().items()}
+
+    @View.nested
+    class target_hosts(ExpandableSection):
+        label = 'Target Hosts'
+        search_query = Text('./div[contains(@class, "pf-c-expandable-section__content")]/pre')
+        data = PF4DataList()
+
+        def read(self):
+            return {'search_query': self.search_query.read(), 'data': self.data.read()}
+
+    @View.nested
+    class user_inputs(ExpandableSection):
+        label = 'User Inputs'
+        data = PF4DataList()
+
+        def read(self):
+            return {'data': self.data.read()}

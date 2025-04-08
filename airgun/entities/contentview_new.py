@@ -3,6 +3,7 @@ import time
 
 from navmazing import NavigateToSibling
 from widgetastic.exceptions import NoSuchElementException
+from widgetastic_patternfly4.dropdown import DropdownItemDisabled
 
 from airgun.entities.base import BaseEntity
 from airgun.navigation import NavigateStep, navigator
@@ -62,6 +63,21 @@ class NewContentViewEntity(BaseEntity):
         self.browser.plugin.ensure_page_safe(timeout='5s')
         view.wait_displayed()
         return view.versions.table.read()
+
+    def check_publish_banner(self, cv_name):
+        """Check if the needs_publish banner is displayed on the content view index page"""
+        view = self.navigate_to(self, 'All')
+        self.browser.plugin.ensure_page_safe(timeout='5s')
+        view.wait_displayed()
+        if not view.table.is_displayed:
+            # no table present, no CVs in this Org
+            return None
+        view.search(cv_name)
+        view.table[0][6].widget.item_select('Publish')
+        view = ContentViewVersionPublishView(self.browser)
+        is_displayed = view.publish_alert.is_displayed
+        view.cancel_button.click()
+        return is_displayed
 
     def delete(self, entity_name):
         """Deletes the content view by name"""
@@ -228,6 +244,25 @@ class NewContentViewEntity(BaseEntity):
         self.browser.plugin.ensure_page_safe(timeout='5s')
         view.wait_displayed()
         return view.table.read()
+
+    def click_version_dropdown(self, entity_name, version, dropdown_option):
+        """Clicks a specific dropdown option for a CV Version"""
+        view = self.navigate_to(self, 'Version', entity_name=entity_name, version=version)
+        self.browser.plugin.ensure_page_safe(timeout='5s')
+        view.wait_displayed()
+        return view.version_dropdown.item_select(dropdown_option)
+
+    def republish_metadata_error(self, entity_name, version):
+        """Clicks a specific dropdown option for a CV Version, that will throw an error"""
+        view = self.navigate_to(self, 'Version', entity_name=entity_name, version=version)
+        self.browser.plugin.ensure_page_safe(timeout='5s')
+        view.wait_displayed()
+        try:
+            view.version_dropdown.item_select('Republish repository metadata')
+        except DropdownItemDisabled as error:
+            if 'Item "Republish repository metadata"' and 'is disabled' in error.args[0]:
+                return True
+        return 'No error was found, metadata unexpectedly was able to be published.'
 
     def promote(self, entity_name, version_name, lce_name):
         """Promotes the selected version of content view to given environment.

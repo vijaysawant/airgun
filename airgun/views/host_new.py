@@ -309,6 +309,14 @@ class NewHostDetailsView(BaseLoggedInView):
 
             details = HostDetailsCard()
 
+        @View.nested
+        class bootc(Card):
+            # Will file issue for this to be fixed
+            ROOT = './/article[contains(@data-ouia-component-id, "card-template-image-mode")]'
+
+            remote_execution_link = Text(".//a[normalize-space(.)='Modify via remote execution']")
+            details = HostDetailsCard()
+
     @View.nested
     class content(Tab):
         # TODO Setting ROOT is just a workaround because of BZ 2119076,
@@ -512,6 +520,10 @@ class NewHostDetailsView(BaseLoggedInView):
         class variables(Tab):
             TAB_NAME = 'Variables'
             ROOT = './/div[@class="ansible-host-detail"]'
+
+            actions = Button(locator='//tbody/tr/td[7]//button')
+            delete = Button(locator='//button[@role="menuitem"]')
+            confirm = Button(locator='//button[@data-ouia-component-id="btn-modal-confirm"]')
             table = Table(
                 locator='.//table[contains(@class, "pf-c-table")]',
                 column_widgets={
@@ -519,13 +531,19 @@ class NewHostDetailsView(BaseLoggedInView):
                     'Ansible role': Text('./span'),
                     'Type': Text('./span'),
                     # the next field can also be a form group
-                    'Value': Text('./span'),
+                    'Value': TextInput(locator='//textarea[contains(@class, "pf-c-form")]'),
                     'Source attribute': Text('./span'),
                     # The next 2 buttons are hidden by default, but appear in this order
-                    5: Button(locator='.//button[@aria-label="Cancel editing override button"]'),
-                    6: Button(locator='.//button[@aria-label="Submit override button"]'),
+                    6: Button(locator='.//button[@aria-label="Cancel editing override button"]'),
+                    7: Button(locator='.//button[@aria-label="Submit override button"]'),
                     # Clicking this button hides it, and displays the previous 2
-                    7: Button(locator='.//button[@aria-label="Edit override button"]'),
+                    5: Button(locator='.//button[@aria-label="Edit override button"]'),
+                },
+            )
+            table1 = Table(
+                locator='.//table[contains(@class, "pf-c-table")]',
+                column_widgets={
+                    5: Button(locator='.//button[@aria-label="Submit editing override button"]'),
                 },
             )
             pagination = PF4Pagination()

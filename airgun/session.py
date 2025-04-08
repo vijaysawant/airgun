@@ -19,6 +19,7 @@ from airgun.entities.ansible_variable import AnsibleVariablesEntity
 from airgun.entities.architecture import ArchitectureEntity
 from airgun.entities.audit import AuditEntity
 from airgun.entities.bookmark import BookmarkEntity
+from airgun.entities.bootc import BootcEntity
 from airgun.entities.capsule import CapsuleEntity
 from airgun.entities.cloud_insights import CloudInsightsEntity
 from airgun.entities.cloud_inventory import CloudInventoryEntity
@@ -372,6 +373,11 @@ class Session:
         return self._open(BookmarkEntity)
 
     @cached_property
+    def bootc(self):
+        """Instance of Bootc entity."""
+        return self._open(BootcEntity)
+
+    @cached_property
     def capsule(self):
         """Instance of Capsule entity."""
         return self._open(CapsuleEntity)
@@ -383,12 +389,12 @@ class Session:
 
     @cached_property
     def cloudinventory(self):
-        """Instance of RH Cloud Inventory Upload entity."""
+        """Instance of Insights Inventory Upload entity."""
         return self._open(CloudInventoryEntity)
 
     @cached_property
     def cloudinsights(self):
-        """Instance of RH Cloud Insights entity."""
+        """Instance of Insights entity."""
         return self._open(CloudInsightsEntity)
 
     @cached_property

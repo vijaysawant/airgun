@@ -77,6 +77,7 @@ class ContentViewTableView(BaseLoggedInView, SearchableViewMixinPF4):
             'Last Published': ('./a'),
             'Last task': Text('.//a'),
             'Latest version': Text('.//a'),
+            6: Dropdown(locator='.//div[contains(@class, "pf-c-dropdown")]'),
         },
     )
 
@@ -213,6 +214,7 @@ class ContentViewVersionPublishView(BaseLoggedInView):
     # publishing view is a popup so adding all navigation within the same context
     ROOT = './/div[contains(@class,"pf-c-wizard")]'
     title = Text(".//h2[contains(., 'Publish') and contains(@aria-label, 'Publish')]")
+    publish_alert = Text(".//h4[contains(., 'No available repository or filter updates')]")
     # publishing screen
     description = TextInput(id='description')
     promote = Switch('promote-switch')
@@ -267,6 +269,9 @@ class ContentViewVersionDetailsView(BaseLoggedInView):
     )
     promoteButton = PF4Button(
         locator='.//button[@data-ouia-component-id="cv-details-publish-button"]'
+    )
+    version_dropdown = Dropdown(
+        locator='.//div[@data-ouia-component-id="cv-version-header-actions-dropdown"]'
     )
     editDescription = PF4Button(
         locator='.//button[@data-ouia-component-id="edit-button-description"]'
@@ -347,8 +352,10 @@ class ContentViewVersionDetailsView(BaseLoggedInView):
     @property
     def is_displayed(self):
         breadcrumb_loaded = self.browser.wait_for_element(self.breadcrumb, exception=False)
+        title_loaded = self.browser.wait_for_element(self.version, exception=False)
         return (
             breadcrumb_loaded
+            and title_loaded
             and len(self.breadcrumb.locations) > LOCATION_NUM
             and self.breadcrumb.locations[0] == 'Content views'
             and self.breadcrumb.locations[2] == 'Versions'

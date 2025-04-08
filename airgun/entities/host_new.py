@@ -64,6 +64,23 @@ class NewHostEntity(HostEntity):
         view.read(widget_names=widget_names)
         return view.read(widget_names=widget_names)
 
+    def run_bootc_job(self, entity_name, job_name, job_options=None):
+        """Navigate to the Host Details UI, and run a specified job from the link on the bootc card."""
+        view = self.navigate_to(self, 'NewDetails', entity_name=entity_name)
+        view.wait_displayed()
+        self.browser.plugin.ensure_page_safe()
+        view.details.bootc.remote_execution_link.click()
+        if job_options:
+            job_input = {
+                'target_hosts_and_inputs.action': f'{job_name}',
+                'target_hosts_and_inputs.options': f'{job_options}',
+            }
+        else:
+            job_input = {'target_hosts_and_inputs.action': f'{job_name}'}
+        view = JobInvocationCreateView(self.browser)
+        view.fill(job_input)
+        view.submit.click()
+
     @navigate_to_edit_view
     def assign_role_to_hostgroup(self, entity_name, role_name):
         """Assign a single Ansible role from the host group based on user input
@@ -428,7 +445,7 @@ class NewHostEntity(HostEntity):
         """
 
         errata_types = ['Security', 'Bugfix', 'Enhancement']
-        errata_counts = {type: 0 for type in errata_types}
+        errata_counts = dict.fromkeys(errata_types, 0)
         view = self.navigate_to(self, 'NewDetails', entity_name=entity_name)
         view.wait_displayed()
         view.content.errata.select()
@@ -974,6 +991,26 @@ class NewHostEntity(HostEntity):
         view.wait_displayed()
         self.browser.plugin.ensure_page_safe()
         view.dropdown.item_select('Refresh applicability')
+
+    def update_variable_value(self, entity_name, key, value):
+        view = self.navigate_to(self, 'NewDetails', entity_name=entity_name)
+        wait_for(lambda: view.ansible.variables.table.is_displayed, timeout=10)
+        # Index [5] essentially refers to the button used to edit the value. The same index is then applied to either 'Yes' or 'No' options to update the value
+        view.ansible.variables.table.row(name=key)[5].widget.click()
+        view.ansible.variables.table.row(name=key)['Value'].click()
+        view.ansible.variables.table.row(name=key)['Value'].widget.fill(value)
+        view.ansible.variables.table1.row(name=key)[5].widget.click()
+
+    def del_variable_value(self, entity_name):
+        view = self.navigate_to(self, 'NewDetails', entity_name=entity_name)
+        view.ansible.variables.actions.click()
+        view.ansible.variables.delete.click()
+        view.ansible.variables.confirm.click()
+
+    def read_variable_value(self, entity_name, key):
+        view = self.navigate_to(self, 'NewDetails', entity_name=entity_name)
+        value = view.ansible.variables.table.row(name=key)['Value'].read()
+        return value
 
 
 @navigator.register(NewHostEntity, 'NewDetails')

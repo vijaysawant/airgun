@@ -460,7 +460,7 @@ class MultiSelect(GenericLocatorWidget):
 
     def __init__(self, parent, locator=None, id=None, logger=None):
         """Supports initialization via ``locator=`` or ``id=``"""
-        if locator and id or not locator and not id:
+        if (locator and id) or (not locator and not id):
             raise TypeError('Please specify either locator or id')
         locator = locator or f".//div[@id='{id}']"
         super().__init__(parent, locator, logger)
@@ -558,7 +558,7 @@ class PF4MultiSelect(GenericLocatorWidget):
 
     def __init__(self, parent, locator=None, id=None, logger=None):
         """Supports initialization via ``locator=`` or ``id=``"""
-        if locator and id or not locator and not id:
+        if (locator and id) or (not locator and not id):
             raise TypeError('Please specify either locator or id')
         locator = locator or f".//div[@id='{id}']"
         super().__init__(parent, locator, logger)
@@ -1155,24 +1155,26 @@ class FilteredDropdown(GenericLocatorWidget):
 
     """
 
-    selected_value = Text("./a/span[contains(@class, 'chosen')]")
-    open_filter = Text("./a/span[contains(@class, 'arrow')]")
+    selected_value = Text("./ancestor::div[1]//span/span[contains(@class, 'rendered')]")
+    open_filter = Text("./ancestor::div[1]//span/span[contains(@class, 'arrow')]")
     clear_filter = Text("./a/abbr")
-    filter_criteria = TextInput(locator="//div[@id='select2-drop']//input")
+    filter_criteria = TextInput(
+        locator="//span[@class='select2-search select2-search--dropdown']//input"
+    )
     filter_content = ItemsList(
-        "//div[not(contains(@style, 'display: none')) and @id='select2-drop']/ul"
+        "//span[not(contains(@style, 'display: none')) and @class='select2-results']/ul"
     )
 
     def __init__(self, parent, id=None, locator=None, logger=None):
         """Supports initialization via ``id=`` or ``locator=``"""
-        if locator and id or not locator and not id:
+        if (locator and id) or (not locator and not id):
             raise ValueError('Please specify either locator or id')
-        locator = locator or f".//div[contains(@id, '{id}')]"
+        locator = locator or f".//select[contains(@id, '{id}')]"
         super().__init__(parent, locator, logger)
 
     def read(self):
-        """Return drop-down selected item value"""
-        return self.browser.text(self.selected_value)
+        """Return drop-down selected item value and remove special character using unicode u00d7"""
+        return self.browser.text(self.selected_value).replace('\u00d7', '').strip()
 
     def clear(self):
         """Clear currently selected value for drop-down"""
@@ -1239,11 +1241,8 @@ class CustomParameter(Table):
 
     def __init__(self, parent, **kwargs):
         """Supports initialization via ``locator=`` or ``id=``"""
-        if (
-            kwargs.get('locator')
-            and kwargs.get('id')
-            or not kwargs.get('locator')
-            and not kwargs.get('id')
+        if (kwargs.get('locator') and kwargs.get('id')) or (
+            not kwargs.get('locator') and not kwargs.get('id')
         ):
             raise ValueError('Please specify either locator or id')
         locator = kwargs.get('locator') or f".//table[@id='{kwargs.pop('id')}']"
@@ -1618,7 +1617,7 @@ class EditableEntry(GenericLocatorWidget):
 
     def __init__(self, parent, locator=None, name=None, logger=None):
         """Supports initialization via ``locator=`` or ``name=``"""
-        if locator and name or not locator and not name:
+        if (locator and name) or (not locator and not name):
             raise TypeError('Please specify either locator or name')
         locator = locator or f".//dt[normalize-space(.)='{name}']/following-sibling::dd[1]"
         super().__init__(parent, locator, logger)
@@ -1634,10 +1633,12 @@ class EditableEntry(GenericLocatorWidget):
         # not required for it
         if self.edit_button.is_displayed:
             self.edit_button.click()
+        if self.edit_field.is_displayed:
             self.edit_field.fill(value)
             self.save_button.click()
         if self.pf4_edit_button.is_displayed:
             self.pf4_edit_button.click()
+        if self.pf4_edit_field.is_displayed:
             self.pf4_edit_field.fill(value)
             self.pf4_save_button.click()
 
@@ -1778,7 +1779,7 @@ class ReadOnlyEntry(GenericLocatorWidget):
 
     def __init__(self, parent, locator=None, name=None, logger=None):
         """Supports initialization via ``locator=`` or ``name=``"""
-        if locator and name or not locator and not name:
+        if (locator and name) or (not locator and not name):
             raise TypeError('Please specify either locator or name')
         locator = locator or self.BASE_LOCATOR.format(name)
         super().__init__(parent, locator, logger)
@@ -2900,3 +2901,43 @@ class SatPatternflyTable(BasePatternflyTable, Table):
 
 class SatExpandableTable(BaseExpandableTable, SatPatternflyTable):
     pass
+
+
+class ExpandableSection(Widget):
+    ROOT = ParametrizedLocator(
+        '//div[contains(@class, "pf-c-expandable-section")]/button[normalize-space(.)={@label|quote}]/..'
+    )
+    TOGGLE_BUTTON = ParametrizedLocator('./button[normalize-space(.)={@label|quote}]')
+    EXPANDED_CLASS_NAME = 'pf-m-expanded'
+
+    @property
+    def is_expanded(self):
+        return self.EXPANDED_CLASS_NAME in self.browser.classes(self.ROOT)
+
+    def expand(self):
+        if not self.is_expanded:
+            self.browser.click(self.TOGGLE_BUTTON)
+
+    def collapse(self):
+        if self.is_expanded:
+            self.browser.click(self.TOGGLE_BUTTON)
+
+    def read(self):
+        self.expand()
+
+
+class PF4DataList(Widget):
+    """Widget for PatternFly 4 Data list: https://pf4.patternfly.org/components/data-list"""
+
+    ROOT = './/ul[contains(@class, "pf-c-data-list")]'
+    ITEMS = './li//div[contains(@class, "pf-c-data-list__item-content")]/div[1]'
+    VALUES = './li//div[contains(@class, "pf-c-data-list__item-content")]/div[2]'
+
+    def read(self):
+        items = [self.browser.text(item) for item in self.browser.elements(self.ITEMS)]
+        values = [self.browser.text(value) for value in self.browser.elements(self.VALUES)]
+        if len(items) != len(values):
+            raise ValueError(
+                f'The count of data list labels and values does not match. Labels: {items}. Values: {values}'
+            )
+        return dict(zip(items, values))
