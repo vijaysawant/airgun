@@ -19,13 +19,18 @@ from widgetastic_patternfly import BreadCrumb, Button
 from widgetastic_patternfly4.ouia import (
     BreadCrumb as PF4BreadCrumb,
     Button as PF4Button,
-    FormSelect,
-    Select as PF4Select,
-    TextInput as OUIATextInput,
 )
-from widgetastic_patternfly4.tabs import Tab
+from widgetastic_patternfly5.components.tabs import Tab
+from widgetastic_patternfly5.ouia import (
+    Button as PF5Button,
+    FormSelect as PF5FormSelect,
+    PatternflyTable as PF5OUIATable,
+    Select as PF5OUIASelect,
+    TextInput as PF5OUIATextInput,
+)
 
 from airgun.views.common import BaseLoggedInView, SatTab, SearchableViewMixinPF4
+from airgun.views.host_new import MenuToggleButtonMenu
 from airgun.views.job_invocation import JobInvocationCreateView, JobInvocationStatusView
 from airgun.views.task import TaskDetailsView
 from airgun.widgets import (
@@ -217,21 +222,21 @@ class HostStatusesView(BaseLoggedInView):
 
 class HostsView(BaseLoggedInView, SearchableViewMixinPF4):
     title = Text("//h1[normalize-space(.)='Hosts']")
-    manage_columns = PF4Button('manage-columns-button')
+    manage_columns = PF5Button('manage-columns-button')
     export = Text(".//a[contains(@class, 'btn')][contains(@href, 'hosts.csv')]")
-    new = Text(".//div[@id='rails-app-content']//a[contains(normalize-space(.),'Create Host')]")
+    new = Text(".//div[@id='foreman-page']//a[@data-ouia-component-id='create-host-button']")
     register = PF4Button('OUIA-Generated-Button-secondary-2')
     new_ui_button = Text(".//a[contains(@class, 'btn')][contains(@href, 'new/hosts')]")
     select_all = Checkbox(locator="//input[@id='check_all']")
-    table = SatTable(
-        './/table',
+    table = PF5OUIATable(
+        component_id='table',
         column_widgets={
-            0: Checkbox(locator=".//input[@class='host_select_boxes']"),
+            0: Checkbox(locator='.//input[@type="checkbox"]'),
             'Name': Text(
-                ".//a[contains(@href, '/new/hosts/') and not(contains(@href, 'Insights'))]"
+                ".//a[contains(@href, '/new/hosts/') and not(contains(@href, 'Red Hat Lightspeed'))]"
             ),
             'Recommendations': Text("./a"),
-            'Actions': ActionsDropdown("./div[contains(@class, 'btn-group')]"),
+            6: MenuToggleButtonMenu(),
         },
     )
     displayed_table_headers = ".//table/thead/tr/th[not(@hidden)]"
@@ -307,8 +312,7 @@ class HostCreateView(BaseLoggedInView):
         Note: The provider name is always appended to the end of the compute resource name,
         for example: compute resource name "foo"
 
-        1. For RHV provider, the compute resource name will be displayed as: "foo (RHV)"
-        2. For Libvirt provider, the compute resource name will be displayed as: "foo (Libvirt)"
+        1. For Libvirt provider, the compute resource name will be displayed as: "foo (Libvirt)"
 
         Return "Compute resource is not specified" value in case no compute resource specified
         in deployment procedure (e.g. "Bare Metal")
@@ -519,49 +523,53 @@ class HostCreateView(BaseLoggedInView):
 
 class HostRegisterView(BaseLoggedInView):
     title = Text("//h1[normalize-space(.)='Register Host']")
-    generate_command = PF4Button('registration_generate_btn')
-    cancel = PF4Button('registration-cancel-button')
+    generate_command = PF5Button('registration_generate_btn')
+    cancel = PF5Button('registration-cancel-button')
     registration_command = TextInput(locator="//input[@aria-label='Copyable input']")
 
     @View.nested
     class general(Tab):
         TAB_NAME = 'General'
         TAB_LOCATOR = ParametrizedLocator(
-            './/div[contains(@class, "pf-c-tabs")]//ul'
+            './/div[contains(@class, "pf-v5-c-tabs")]//ul'
             "/li[button[normalize-space(.)={@tab_name|quote}]]"
         )
         ROOT = '//section[@id="generalSection"]'
 
-        organization = FormSelect('reg_organization')
-        location = FormSelect('reg_location')
-        host_group = FormSelect('reg_host_group')
-        operating_system = FormSelect('os-select')
+        organization = PF5FormSelect('reg_organization')
+        location = PF5FormSelect('reg_location')
+        host_group = PF5FormSelect('reg_host_group')
+        operating_system = PF5FormSelect('os-select')
         linux_host_init_link = Link('//a[normalize-space(.)="Linux host_init_config default"]')
-        capsule = FormSelect('reg_smart_proxy')
+        capsule = PF5FormSelect('reg_smart_proxy')
         insecure = Checkbox(id='reg_insecure')
         activation_keys = BaseMultiSelect('activation-keys-field')
-        activation_key_helper = Text("//div[@id='activation_keys_field-helper']")
+        activation_key_helper = Text(
+            locator='//div[@data-ouia-component-id="activation-keys-field"]/..//div[contains(@class, "-c-helper-text")]'
+        )
         new_activation_key_link = Link('//a[normalize-space(.)="Create new activation key"]')
 
     @View.nested
     class advanced(Tab):
         TAB_NAME = 'Advanced'
         TAB_LOCATOR = ParametrizedLocator(
-            './/div[contains(@class, "pf-c-tabs")]//ul'
+            './/div[contains(@class, "pf-v5-c-tabs")]//ul'
             "/li[button[normalize-space(.)={@tab_name|quote}]]"
         )
         ROOT = '//section[@id="advancedSection"]'
-        setup_rex = FormSelect('registration_setup_remote_execution')
-        setup_insights = FormSelect('registration_setup_insights')
+        setup_rex = PF5FormSelect('registration_setup_remote_execution')
+        setup_insights = PF5FormSelect('registration_setup_insights')
         install_packages = TextInput(id='reg_packages')
         update_packages = Checkbox(id='reg_update_packages')
         token_life_time = TextInput(id='reg_token_life_time_input')
         rex_interface = TextInput(id='reg_rex_interface_input')
-        rex_pull_mode = FormSelect('registration_setup_remote_execution_pull')
+        rex_pull_mode = PF5FormSelect('registration_setup_remote_execution_pull')
         ignore_error = Checkbox(id='reg_katello_ignore')
         force = Checkbox(id='reg_katello_force')
-        install_packages_helper = Text("//div[@id='reg_packages-helper']")
-        repository_add = PF4Button('host_reg_add_more_repositories')
+        install_packages_helper = Text(
+            locator='//input[@id="reg_packages"]/../..//div[contains(@class, "-c-helper-text")]'
+        )
+        repository_add = PF5Button('host_reg_add_more_repositories')
 
     @property
     def is_displayed(self):
@@ -593,14 +601,14 @@ class HostRegisterView(BaseLoggedInView):
 class RepositoryListView(View):
     """Repository List view"""
 
-    ROOT = '//div[@id="pf-modal-part-0" or @data-ouia-component-type="PF4/ModalContent"]'
-    repository = OUIATextInput('host_reg_repo')
-    repository_gpg_key_url = OUIATextInput('host_reg_gpg_key')
-    repository_list_confirm = PF4Button('reg_modal_confirm')
-    repository_list_reset = PF4Button('reg_modal_reset')
-    repository_list_add_new = PF4Button('host_reg_modal_add_new_repo')
-    repository_list_remove = PF4Button('0')
-    repository_list_popup_close = PF4Button('host_reg_repo_modal-ModalBoxCloseButton')
+    ROOT = '//div[@id="pf-modal-part-0" or @data-ouia-component-type="PF5/ModalContent"]'
+    repository = PF5OUIATextInput('host_reg_repo')
+    repository_gpg_key_url = PF5OUIATextInput('host_reg_gpg_key')
+    repository_list_confirm = PF5Button('reg_modal_confirm')
+    repository_list_reset = PF5Button('reg_modal_reset')
+    repository_list_add_new = PF5Button('host_reg_modal_add_new_repo')
+    repository_list_remove = PF5Button('0')
+    repository_list_popup_close = PF5Button('host_reg_repo_modal-ModalBoxCloseButton')
 
 
 class RecommendationWidget(GenericLocatorWidget):
@@ -745,16 +753,16 @@ class HostsChangeGroup(HostsActionCommonDialog):
 class HostsChangeContentSourceView(View):
     title = Text('//h5')
 
-    hosts_to_update = Text('//span[@class="pf-c-label pf-m-green"]//a')
-    ignored_hosts = Text('//span[@class="pf-c-label pf-m-orange"]//a')
+    hosts_to_update = Text('//span[@class="pf-v5-c-label pf-m-green"]//a')
+    ignored_hosts = Text('//span[@class="pf-v5-c-label pf-m-orange"]//a')
 
-    content_source_select = PF4Select('content-source-select')
+    content_source_select = PF5OUIASelect('content-source-select')
     disabled_environment_status = Text('//div[@aria-label="Info Alert"]')
 
     lce_env_title = Text('//div[normalize-space(.)="Lifecycle environment"]')
     lce_env_path_list = Text('//div[@class="env-path"]/div/div')
 
-    content_view_select = PF4Select('SelectContentView')
+    content_view_select = PF5OUIASelect('SelectContentView')
     content_view_select_btn = Text(locator='//button[@aria-label="Options menu" and @tabindex]')
 
     run_job_invocation = Text(locator='//*[normalize-space(.)="Run job invocation"]')

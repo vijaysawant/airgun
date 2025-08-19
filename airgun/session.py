@@ -42,6 +42,7 @@ from airgun.entities.errata import ErrataEntity
 from airgun.entities.fact_value import FactValueEntity
 from airgun.entities.file import FilesEntity
 from airgun.entities.filter import FilterEntity
+from airgun.entities.flatpak import FlatpakRemotesEntity
 from airgun.entities.global_parameter import GlobalParameterEntity
 from airgun.entities.hardware_model import HardwareModelEntity
 from airgun.entities.host import HostEntity
@@ -88,6 +89,7 @@ from airgun.entities.sync_status import SyncStatusEntity
 from airgun.entities.sync_templates import SyncTemplatesEntity
 from airgun.entities.syncplan import SyncPlanEntity
 from airgun.entities.task import TaskEntity
+from airgun.entities.upgrade import UpgradeEntity
 from airgun.entities.user import UserEntity
 from airgun.entities.usergroup import UserGroupEntity
 from airgun.entities.virtwho_configure import VirtwhoConfigureEntity
@@ -477,6 +479,11 @@ class Session:
         return self._open(FactValueEntity)
 
     @cached_property
+    def flatpak_remotes(self):
+        """Instance of Flatpak Remotes entity."""
+        return self._open(FlatpakRemotesEntity)
+
+    @cached_property
     def filter(self):
         """Instance of Filter entity."""
         return self._open(FilterEntity)
@@ -715,6 +722,11 @@ class Session:
     def task(self):
         """Instance of Task entity."""
         return self._open(TaskEntity)
+
+    @cached_property
+    def upgrade(self):
+        """Instance of Upgrade entity."""
+        return self._open(UpgradeEntity)
 
     @cached_property
     def user(self):

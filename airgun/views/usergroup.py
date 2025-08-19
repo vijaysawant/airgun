@@ -1,6 +1,6 @@
 from widgetastic.widget import Checkbox, Table, Text, TextInput, View
 from widgetastic_patternfly import BreadCrumb
-from widgetastic_patternfly4 import Button as P4Button
+from widgetastic_patternfly5 import Button
 
 from airgun.views.common import BaseLoggedInView, SatTab, SearchableViewMixinPF4
 from airgun.widgets import FilteredDropdown, MultiSelect
@@ -8,7 +8,7 @@ from airgun.widgets import FilteredDropdown, MultiSelect
 
 class UserGroupsView(BaseLoggedInView, SearchableViewMixinPF4):
     title = Text("//h1[normalize-space(.)='User Groups']")
-    new_on_blank_page = P4Button('Create User group')
+    new_on_blank_page = Button('Create User group')
     new = Text("//a[contains(@href, '/usergroups/new')]")
     table = Table(
         './/table',
@@ -67,10 +67,8 @@ class UserGroupDetailsView(BaseLoggedInView):
             )
         )
         auth_source = FilteredDropdown(
-            locator=(
-                "//div[starts-with(@id, 'usergroup_external_usergroups_attributes')]"
-                "[contains(@id, 'auth_source_id')]"
-            )
+            # this locator fails when there are multiple user groups, it doesn't specify which
+            locator=("//span[contains(@class, 'select2-selection__rendered')]")
         )
 
         def before_fill(self, values):

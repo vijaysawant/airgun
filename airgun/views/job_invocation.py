@@ -1,12 +1,18 @@
 from wait_for import wait_for
 from widgetastic.widget import Checkbox, Text, TextInput, View
 from widgetastic_patternfly import BreadCrumb
-from widgetastic_patternfly4 import Button, ChipGroup, DescriptionList, Radio, Select
-from widgetastic_patternfly4.donutchart import DonutCircle, DonutLegend
-from widgetastic_patternfly4.ouia import (
-    Dropdown as OUIADropdown,
-    Select as OUIASelect,
-    Text as OUIAText,
+from widgetastic_patternfly4 import Button
+from widgetastic_patternfly5 import (
+    ChipGroup as PF5ChipGroup,
+    DescriptionList,
+    Radio as PF5Radio,
+)
+from widgetastic_patternfly5.charts.donut_chart import DonutCircle, DonutLegend
+from widgetastic_patternfly5.ouia import (
+    Dropdown as PF5OUIADropdown,
+    Select as PF5OUIASelect,
+    Text as PF5OUIAText,
+    TextInput as PF5OUIATextInput,
 )
 
 from airgun.views.common import (
@@ -16,7 +22,7 @@ from airgun.views.common import (
     SearchableViewMixin,
     WizardStepView,
 )
-from airgun.widgets import ActionsDropdown, ExpandableSection, PF4DataList
+from airgun.widgets import ActionsDropdown, PF5DataList, PF5LabeledExpandableSection
 
 
 class JobInvocationsView(BaseLoggedInView, SearchableViewMixin):
@@ -35,59 +41,64 @@ class JobInvocationCreateView(BaseLoggedInView):
     @View.nested
     class category_and_template(WizardStepView):
         expander = Text(".//button[contains(.,'Category and template')]")
-        job_category = Select(locator='//div[*[@aria-label="Job category toggle"]]')
-        job_template = Select(locator='//div[div/*[@aria-label="Job template toggle"]]')
+        job_category = PF5OUIASelect('job_category')
+        job_template = PF5OUIASelect('job_template')
+        job_template_text_input = TextInput(
+            locator='//div[contains(@class, "pf-v5-c-form__group") and .//label[.//span[text()="Job template"]]]//input[@type="text"]'
+        )
 
     @View.nested
     class target_hosts_and_inputs(WizardStepView):
         expander = Text(".//button[contains(.,'Target hosts and inputs')]")
         command = TextInput(id='command')
 
-        selected_hosts = ChipGroup(locator='//div[@class="selected-chips"]/div')
+        selected_hosts = PF5ChipGroup(locator='//div[@class="selected-chips"]/div')
 
-        package_action = OUIASelect('OUIA-Generated-Select-single-15')
+        package_action = PF5OUIASelect('action')
         package = TextInput(id='package')
 
-        action = Select(locator='//div[button[@aria-label="action toggle"]]')
+        action = PF5OUIASelect('action')
         service = TextInput(id='service')
 
-        module_action = OUIASelect('OUIA-Generated-Select-single-31')
+        module_action = PF5OUIASelect('action')
         module_spec = TextInput(id='module_spec')
         options = TextInput(id='options')
 
         ansible_collections_list = TextInput(id='ansible_collections_list')
         ansible_roles_list = TextInput(id='ansible_roles_list')
-        power_action = OUIASelect('OUIA-Generated-Select-single-34')
+        power_action = PF5OUIASelect('action')
 
-        targetting_type = Select(locator='//div[button[@aria-haspopup="listbox"]]')
-        targets = Select(locator='//div[contains(@data-ouia-component-id,"hosts")]')
+        targetting_type = PF5OUIASelect('host_methods')
+        targets = PF5OUIASelect('hosts')
+        targets_host_groups = PF5OUIASelect('host groups')
+        targets_host_collecitons = PF5OUIASelect('host collections')
 
     @View.nested
     class advanced_fields(WizardStepView):
         expander = Text(".//button[contains(.,'Advanced fields')]")
-        ssh_user = TextInput(id='ssh-user')
-        effective_user = TextInput(id='effective-user')
-        timeout_to_kill = TextInput(id='timeout-to-kill')
-        time_to_pickup = TextInput(id='time-to-pickup')
-        password = TextInput(id='job-password')
-        pk_passphrase = TextInput(id='key-passphrase')
-        effective_user_password = TextInput(id='effective-user-password')
-        concurrency_level = TextInput(id='concurrency-level')
-        time_span = TextInput(id='time-span')
-        execution_order_alphabetical = Radio(id='execution-order-alphabetical')
-        execution_order_randomized = Radio(id='execution-order-randomized')
+        ssh_user = PF5OUIATextInput('ssh-user')
+        effective_user = PF5OUIATextInput('effective-user')
+        timeout_to_kill = PF5OUIATextInput('timeout-to-kill')
+        time_to_pickup = PF5OUIATextInput('time-to-pickup')
+        password = PF5OUIATextInput('job-password')
+        pk_passphrase = PF5OUIATextInput('key-passphrase')
+        effective_user_password = PF5OUIATextInput('effective-user-password')
+        concurrency_level = PF5OUIATextInput('concurrency-level')
+        time_span = PF5OUIATextInput('time-span')
+        execution_order_alphabetical = PF5Radio(id='execution-order-alphabetical')
+        execution_order_randomized = PF5Radio(id='execution-order-randomized')
         ansible_collections_path = TextInput(id='collections_path')
 
     @View.nested
     class schedule(WizardStepView):
         expander = Text(".//button[contains(.,'Type of execution')]")
         # Execution type
-        immediate = Radio(id='schedule-type-now')
-        future = Radio(id='schedule-type-future')
-        recurring = Radio(id='schedule-type-recurring')
+        immediate = PF5Radio(id='schedule-type-now')
+        future = PF5Radio(id='schedule-type-future')
+        recurring = PF5Radio(id='schedule-type-recurring')
         # Query type
-        static_query = Radio(id='query-type-static')
-        dynamic_query = Radio(id='query-type-dynamic')
+        static_query = PF5Radio(id='query-type-static')
+        dynamic_query = PF5Radio(id='query-type-dynamic')
 
     @View.nested
     class schedule_future_execution(WizardStepView):
@@ -105,19 +116,19 @@ class JobInvocationCreateView(BaseLoggedInView):
     class schedule_recurring_execution(WizardStepView):
         expander = Text(".//button[contains(.,'Recurring execution')]")
         # Starts
-        start_now = Radio(id='start-now')
-        start_at = Radio(id='start-at')
+        start_now = PF5Radio(id='start-now')
+        start_at = PF5Radio(id='start-at')
         start_at_date = TextInput(locator='//input[contains(@aria-label, "starts at datepicker")]')
         start_at_time = TextInput(locator='//input[contains(@aria-label, "starts at timepicker")]')
         # Repeats
-        repeats = OUIASelect('OUIA-Generated-Select-single-3')
+        repeats = PF5OUIASelect('repeat-select')
         repeats_at = TextInput(locator='//input[contains(@aria-label, "repeat-at")]')
         # Ends
-        ends_never = Radio(id='never-ends')
-        ends_on = Radio(id='ends-on')
+        ends_never = PF5Radio(id='schedule-never-ends')
+        ends_on = PF5Radio(id='schedule-ends-on-date')
         ends_on_date = TextInput(locator='//input[contains(@aria-label, "ends on datepicker")]')
         ends_on_time = TextInput(locator='//input[contains(@aria-label, "ends on timepicker")]')
-        ends_after = Radio(id='ends-after')
+        ends_after = PF5Radio(id='schedule-ends-after')
         ends_after_count = TextInput(locator='//input[contains(@id, "repeat-amount")]')
         purpose = TextInput(locator='//input[contains(@aria-label, "purpose")]')
 
@@ -217,9 +228,9 @@ class JobInvocationStatusView(BaseLoggedInView):
 
 class NewJobInvocationStatusView(BaseLoggedInView):
     breadcrumb = BreadCrumb()
-    title = OUIAText('breadcrumb_title')
+    title = PF5OUIAText(component_id='breadcrumb_title')
     create_report = Button(value='Create report')
-    actions = OUIADropdown('job-invocation-global-actions-dropdown')
+    actions = PF5OUIADropdown(component_id='job-invocation-global-actions-dropdown')
     BREADCRUMB_LENGTH = 2
 
     @property
@@ -278,18 +289,18 @@ class NewJobInvocationStatusView(BaseLoggedInView):
             return {key.replace(':', ''): val for key, val in super().read().items()}
 
     @View.nested
-    class target_hosts(ExpandableSection):
+    class target_hosts(PF5LabeledExpandableSection):
         label = 'Target Hosts'
-        search_query = Text('./div[contains(@class, "pf-c-expandable-section__content")]/pre')
-        data = PF4DataList()
+        search_query = Text('./div[contains(@class, "-c-expandable-section__content")]/pre')
+        data = PF5DataList()
 
         def read(self):
             return {'search_query': self.search_query.read(), 'data': self.data.read()}
 
     @View.nested
-    class user_inputs(ExpandableSection):
+    class user_inputs(PF5LabeledExpandableSection):
         label = 'User Inputs'
-        data = PF4DataList()
+        data = PF5DataList()
 
         def read(self):
             return {'data': self.data.read()}

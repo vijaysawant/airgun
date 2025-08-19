@@ -26,18 +26,24 @@ from widgetastic_patternfly import (
     Kebab,
     VerticalNavigation,
 )
-from widgetastic_patternfly4 import (
-    Button as PF4Button,
-    Pagination as PF4Pagination,
-)
+from widgetastic_patternfly4 import Pagination as PF4Pagination
 from widgetastic_patternfly4.ouia import (
-    BaseSelect,
     Button as OUIAButton,
-    Dropdown,
-    Menu,
 )
-from widgetastic_patternfly4.progress import Progress as PF4Progress
 from widgetastic_patternfly4.table import BaseExpandableTable, BasePatternflyTable
+from widgetastic_patternfly5 import (
+    Button as PF5Button,
+    ExpandableSection as PF5ExpandableSection,
+    FormSelect,
+    Progress as PF5Progress,
+)
+from widgetastic_patternfly5.ouia import (
+    BaseSelect as PF5BaseSelect,
+    Button as PF5OUIAButton,
+    Dropdown as PF5OUIADropdown,
+    Menu as PF5Menu,
+    OUIAGenericWidget,
+)
 
 from airgun.exceptions import DisabledWidgetError, ReadOnlyWidgetError
 from airgun.utils import get_widget_by_name
@@ -510,8 +516,8 @@ class MultiSelectNoFilter(MultiSelect):
     they will be stored in a list. Unassigned items contains the list which compare with the values,
     if value is present it will assign the value or vise-versa."""
 
-    more_item = Text('//span[@class="pf-c-options-menu__toggle-button-icon"]')
-    select_pages = Text('//ul[@class="pf-c-options-menu__menu"]/li[6]/button')
+    more_item = Text('//span[@class="pf-v5-c-menu-toggle__toggle-icon"]')
+    select_pages = Text('//ul[@class="pf-v5-c-menu__list"]/li[6]/button')
     available_role_template = '//div[@class="available-roles-container col-sm-6"]/div[2]/div'
     assigned_role_template = '//div[@class="assigned-roles-container col-sm-6"]/div[2]/div'
 
@@ -769,14 +775,14 @@ class Pf4ActionsDropdown(ActionsDropdown):
     """
 
     button = Text(
-        './/button[contains(@class,"pf-c-dropdown__toggle-button")'
-        'and not(@data-ouia-component-type="PF4/DropdownToggle")]'
+        './/button[contains(@class,"pf-v5-c-dropdown__toggle-button")'
+        'and not(@data-ouia-component-type="PF5/DropdownToggle")]'
     )
     dropdown = Text(
-        './/button[contains(@class,"pf-c-dropdown__toggle-button")'
-        'and @data-ouia-component-type="PF4/DropdownToggle"]'
+        './/button[contains(@class,"pf-v5-c-dropdown__toggle-button")'
+        'and @data-ouia-component-type="PF5/DropdownToggle"]'
     )
-    ITEMS_LOCATOR = ".//ul[contains(@class, 'pf-c-dropdown__menu')]/li"
+    ITEMS_LOCATOR = ".//ul[contains(@class, 'pf-v5-c-dropdown__menu')]/li"
     ITEM_LOCATOR = ".//ul/li[@role='menuitem' and contains(normalize-space(.), '{}')]"
 
     @property
@@ -818,12 +824,11 @@ class Search(Widget):
             ".//input[@id='search' or contains(@placeholder, 'Filter') or "
             "@ng-model='table.searchTerm' or contains(@ng-model, 'Filter') or "
             "@data-autocomplete-id='searchBar' or contains(@placeholder, 'Search') "
-            "or contains(@class, 'search-input')]"
+            "or contains(@class, 'search-input') or contains(@aria-label, 'Search input')]"
         )
     )
-    search_button = Text(
-        ".//button[contains(@id, 'btn-search') or contains(@type,'submit') or "
-        "contains(@class, 'search-btn') or @ng-click='table.search(table.searchTerm)']"
+    search_button = PF5Button(
+        locator=".//button[span[normalize-space(.)='Search']] | .//button[@aria-label='Search']"
     )
     clear_button = Text(
         ".//span[contains(@class,'autocomplete-clear-button') or contains(@class,'fa-close')]"
@@ -886,8 +891,8 @@ class PF4Search(Search):
             self.search_button.click()
 
 
-class PF4NavSearchMenu(Menu):
-    """PF4 vertical navigation dropdown menu with search results."""
+class PF5NavSearchMenu(PF5Menu, OUIAGenericWidget):
+    """PF5 vertical navigation dropdown menu with search results."""
 
     @property
     def items(self):
@@ -899,14 +904,14 @@ class PF4NavSearchMenu(Menu):
         return [self.browser.text(el) for el in self.items]
 
 
-class PF4NavSearch(PF4Search):
-    """PF4 vertical navigation menu search"""
+class PF5NavSearch(PF4Search):
+    """PF5 vertical navigation menu search."""
 
     ROOT = '//div[@id="navigation-search"]'
-    search_field = TextInput(locator=(".//input[@aria-label='Search input']"))
-    search_button = PF4Button(locator=(".//button[@aria-label='Search']"))
-    clear_button = PF4Button(locator=(".//button[@aria-label='Reset']"))
-    items = PF4NavSearchMenu("navigation-search-menu")
+    search_field = TextInput(locator=".//input[@aria-label='Search input']")
+    search_button = PF5Button(locator=".//button[@aria-label='Search']")
+    clear_button = PF5Button(locator=".//button[@aria-label='Reset']")
+    items = PF5NavSearchMenu(component_id="navigation-search-menu")
     results_timeout = search_clear_timeout = 2
 
     def _wait_for_results(self, results_widget):
@@ -1007,19 +1012,19 @@ class SatFlashMessages(FlashMessages):
 
     Example html representation::
 
-        <ul class="pf-c-alert-group pf-m-toast"><li>
-        <div class="pf-c-alert pf-m-success foreman-toast" aria-label="Success Alert"
+        <ul class="pf-v5-c-alert-group pf-m-toast"><li>
+        <div class="pf-v5-c-alert pf-m-success foreman-toast" aria-label="Success Alert"
             data-ouia-component-type="PF4/Alert" data-ouia-safe="true"
             data-ouia-component-id="OUIA-Generated-Alert-success-1">
             <div class="pf-c-alert__icon">
 
     Locator example::
 
-        //ul[@class="pf-c-alert-group pf-m-toast"]/li/div[contains(@class, "pf-c-alert")]
+        //ul[@class=pf-v5-c-alert-group pf-m-toast"]/li/div[contains(@class, pf-v5-c-alert")]
 
     """
 
-    ROOT = '//ul[@class="pf-c-alert-group pf-m-toast"]'
+    ROOT = '//ul[@class="pf-v5-c-alert-group pf-m-toast"]'
     MSG_LOCATOR = f'{ROOT}//div[contains(@class, "foreman-toast")]'
     msg_class = SatFlashMessage
 
@@ -1048,14 +1053,15 @@ class ValidationErrors(Widget):
 
     """
 
-    ERROR_ELEMENTS = ".//*[contains(@class,'has-error') and not(contains(@style,'display:none'))]"
+    ERROR_ELEMENTS = ".//*[(contains(@class,'has-error') or (contains(@class, 'pf-m-error') and string-length(normalize-space(string())) > 0)) and not(contains(@style,'display:none'))]"
     ERROR_MESSAGES = (
         ".//*[(contains(@class, 'alert base in fade alert-danger') "
         "or contains(@class, 'alert base in fade alert-warning') "
         "or contains(@class,'error-msg') "
-        "or contains(@class,'error-msg-block')"
+        "or contains(@class,'error-msg-block') "
         "or contains(@class,'error-message') "
-        "or contains(@class,'editable-error-block')) "
+        "or contains(@class,'editable-error-block') "
+        "or contains(@class,'pf-v5-c-helper-text__item-text')) "
         "and not(contains(@style,'display:none'))]"
     )
 
@@ -1064,6 +1070,9 @@ class ValidationErrors(Widget):
         """Returns boolean value whether view has fields with invalid data or
         not.
         """
+        time.sleep(
+            1
+        )  # ensure_page_safe doesn't help here and there's nothing to wait_for because the error won't always be there
         return self.browser.elements(self.ERROR_ELEMENTS) != []
 
     @property
@@ -1072,6 +1081,12 @@ class ValidationErrors(Widget):
         fields. Example: ["can't be blank"]
         """
         error_msgs = self.browser.elements(self.ERROR_MESSAGES)
+        if len(error_msgs) > 0:
+            wait_for(
+                lambda: any(self.browser.text(error_msg) for error_msg in error_msgs),
+                timeout=10,
+                delay=1,
+            )
         return [self.browser.text(error_msg) for error_msg in error_msgs]
 
     def assert_no_errors(self):
@@ -1416,6 +1431,16 @@ class Pf4ConfirmationDialog(ConfirmationDialog):
     discard_dialog = OUIAButton('app-confirm-modal-ModalBoxCloseButton')
 
 
+class Pf5ConfirmationDialog(ConfirmationDialog):
+    """PF5 confirmation dialog with two buttons and close 'x' button in the
+    right corner."""
+
+    ROOT = '//div[@id="app-confirm-modal" or @data-ouia-component-type="PF5/ModalContent"]'
+    confirm_dialog = PF5OUIAButton('btn-modal-confirm')
+    cancel_dialog = PF5OUIAButton('btn-modal-cancel')
+    discard_dialog = PF5OUIAButton('app-confirm-modal-ModalBoxCloseButton')
+
+
 class LCESelector(GenericLocatorWidget):
     """Group of checkboxes that goes in a line one after another. Usually used
     to specify lifecycle environment
@@ -1487,15 +1512,13 @@ class LCESelector(GenericLocatorWidget):
         return self.select(checkbox_locator, checkbox_value)
 
 
-class PF4LCESelector(LCESelector):
+class PF5LCESelector(LCESelector):
     """Group of checkboxes that goes in a line one after another. Usually used
-    to specify lifecycle environment, updated for PF4 pages
+    to specify lifecycle environment, updated for PF5 pages
     """
 
-    LABELS = './/label[contains(@class, "pf-c-radio__label")]'
-    CHECKBOX = (
-        './/input[contains(@class, "pf-c-radio__input") and ../label[.//*[contains(text(), "{}")]]]'
-    )
+    LABELS = './/label[contains(@class, "pf-v5-c-radio__label")]'
+    CHECKBOX = './/input[contains(@class, "pf-v5-c-radio__input") and ../label[.//*[contains(text(), "{}")]]]'
 
     def __init__(self, parent, locator=None, logger=None):
         """Allow to specify ``locator`` if needed or use default one otherwise.
@@ -1511,11 +1534,13 @@ class PF4LCESelector(LCESelector):
         return self.browser.is_selected(locator)
 
 
-class PF4LCECheckSelector(PF4LCESelector):
-    """Checkbox version of PF4 LCE Selector"""
+class PF5LCECheckSelector(PF5LCESelector):
+    """Checkbox version of PF5 LCE Selector"""
 
-    LABELS = './/label[contains(@class, "pf-c-check__label")]'
-    CHECKBOX = './/input[contains(@class, "pf-c-check") and ../label[.//*[contains(text(), "{}")]]]'
+    LABELS = './/label[contains(@class, "pf-v5-c-check__label")]'
+    CHECKBOX = (
+        './/input[contains(@class, "pf-v5-c-check") and ../label[.//*[contains(text(), "{}")]]]'
+    )
 
 
 class LimitInput(Widget):
@@ -2330,8 +2355,21 @@ class ProgressBar(GenericLocatorWidget):
         return self.progress
 
 
-class PF4ProgressBar(PF4Progress):
-    locator = './/div[contains(@class, "pf-c-wizard__main-body")]'
+class PF5ProgressBar(PF5Progress):
+    ROOT = './/div[contains(@class, "pf-v5-c-wizard__main-body")]'
+
+    def __init__(self, parent, locator=None, logger=None):
+        """Overrides `locator` parameter to be optional with default of `PF5ProgressBar.ROOT`"""
+        self.locator = locator or self.ROOT
+        super().__init__(parent, self.locator, logger=logger)
+
+    @property
+    def is_displayed(self):
+        if progress_bar := self.browser.wait_for_element(
+            self.PROGRESS_BAR, timeout=1, exception=False
+        ):
+            return progress_bar.is_displayed
+        return False
 
     @property
     def is_completed(self):
@@ -2665,6 +2703,34 @@ class PopOverWidget(View):
         return self.column_value.read()
 
 
+class FieldWithEditButton(Widget):
+    """A pair of a field and a button that makes the field editable.
+    After editing, confirm by checkmark or cancel by X.
+    Is present e.g. in PF5 Settings.
+    """
+
+    ROOT = '//td[2]'
+    text_input = TextInput(locator=".//input[@data-ouia-component-type='PF5/TextInput']")
+    text_area = TextInput(locator=".//textarea")
+    drop_down = FormSelect(locator=".//select[@data-ouia-component-type='PF5/FormSelect']")
+    edit_button = PF5Button(locator=".//button[contains(@data-ouia-component-id, 'edit-row')]")
+    confirm_button = PF5OUIAButton('submit-edit-btn')
+    cancel_button = PF5OUIAButton('cancel-edit-btn')
+    text = Text(locator=".//span")
+
+    def fill(self, item):
+        self.edit_button.click()
+        for widget_name in ['text_input', 'text_area', 'drop_down']:
+            widget = getattr(self, widget_name)
+            if widget.is_displayed:
+                widget.fill(item)
+                break
+        self.confirm_button.click()
+
+    def read(self):
+        return self.text.read()
+
+
 class AuthSourceAggregateCard(AggregateStatusCard):
     """This is a customizable card widget which has the title, count and kebab widget
 
@@ -2722,15 +2788,15 @@ class Accordion(View, ClickableMixin):
         self.browser.click(self.ITEM.format(value))
 
 
-class BaseMultiSelect(BaseSelect, Dropdown):
+class BaseMultiSelect(PF5BaseSelect, PF5OUIADropdown):
     """Represents the Patternfly Multi Select.
 
     https://www.patternfly.org/v4/documentation/react/components/select#multiple
     """
 
     BUTTON_LOCATOR = './/button[@aria-label="Options menu"]'
-    OUIA_COMPONENT_TYPE = "PF4/Select"
-    SELECTED_ITEMS_LIST = './/div[@class="pf-c-chip-group"]'
+    OUIA_COMPONENT_TYPE = "PF5/Select"
+    SELECTED_ITEMS_LIST = './/div[@class="pf-v5-c-chip-group"]'
 
     def item_select(self, items, close=True):
         """Opens the Dropdown and selects the desired items.
@@ -2853,18 +2919,15 @@ class EditModal(View):
 class DualListSelector(EditModal):
     """Class representing the Dual List Selector in a modal."""
 
-    from widgetastic_patternfly4 import Button
-
     available_options_search = SearchInput(locator='.//input[@aria-label="Available search input"]')
     available_options_list = ItemsList(
-        locator='.//div[contains(@class, "pf-m-available")]'
-        '//ul[@class="pf-c-dual-list-selector__list"]'
+        locator='.//ul[contains(@aria-labelledby, "selector-available-pane-status")]'
     )
 
-    add_selected = Button(locator='.//button[@aria-label="Add selected"]')
-    add_all = Button(locator='.//button[@aria-label="Add all"]')
-    remove_all = Button(locator='.//button[@aria-label="Remove all"]')
-    remove_selected = Button(locator='.//button[@aria-label="Remove selected"]')
+    add_selected = PF5Button(locator='.//button[@aria-label="Add selected"]')
+    add_all = PF5Button(locator='.//button[@aria-label="Add all"]')
+    remove_all = PF5Button(locator='.//button[@aria-label="Remove all"]')
+    remove_selected = PF5Button(locator='.//button[@aria-label="Remove selected"]')
 
     chosen_options_search = SearchInput(locator='.//input[@aria-label="Chosen search input"]')
     chosen_options_list = ItemsList(
@@ -2903,35 +2966,29 @@ class SatExpandableTable(BaseExpandableTable, SatPatternflyTable):
     pass
 
 
-class ExpandableSection(Widget):
+class PF5LabeledExpandableSection(PF5ExpandableSection):
+    """PF5 Expandable section (https://pf5.patternfly.org/components/expandable-section/)
+    with a labeled button as the section expand/collapse toggle.
+
+    Note: You need to set the `label` attribute yourself in your inherited class!
+    """
+
     ROOT = ParametrizedLocator(
-        '//div[contains(@class, "pf-c-expandable-section")]/button[normalize-space(.)={@label|quote}]/..'
+        '//div[contains(@class, "-c-expandable-section")]/button[normalize-space(.)={@label|quote}]/..'
     )
-    TOGGLE_BUTTON = ParametrizedLocator('./button[normalize-space(.)={@label|quote}]')
-    EXPANDED_CLASS_NAME = 'pf-m-expanded'
-
-    @property
-    def is_expanded(self):
-        return self.EXPANDED_CLASS_NAME in self.browser.classes(self.ROOT)
-
-    def expand(self):
-        if not self.is_expanded:
-            self.browser.click(self.TOGGLE_BUTTON)
-
-    def collapse(self):
-        if self.is_expanded:
-            self.browser.click(self.TOGGLE_BUTTON)
+    BUTTON_LOCATOR = ParametrizedLocator('.//button[normalize-space(.)={@label|quote}]')
+    label = 'You need to set this `label` attribute yourself!'
 
     def read(self):
         self.expand()
 
 
-class PF4DataList(Widget):
-    """Widget for PatternFly 4 Data list: https://pf4.patternfly.org/components/data-list"""
+class PF5DataList(Widget):
+    """Widget for PatternFly 5 Data list: https://pf5.patternfly.org/components/data-list"""
 
-    ROOT = './/ul[contains(@class, "pf-c-data-list")]'
-    ITEMS = './li//div[contains(@class, "pf-c-data-list__item-content")]/div[1]'
-    VALUES = './li//div[contains(@class, "pf-c-data-list__item-content")]/div[2]'
+    ROOT = './/ul[contains(@class, "-c-data-list")]'
+    ITEMS = './li//div[contains(@class, "-c-data-list__item-content")]/div[1]'
+    VALUES = './li//div[contains(@class, "-c-data-list__item-content")]/div[2]'
 
     def read(self):
         items = [self.browser.text(item) for item in self.browser.elements(self.ITEMS)]

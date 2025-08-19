@@ -11,9 +11,14 @@ from widgetastic.widget import (
     do_not_read_this_widget,
 )
 from widgetastic_patternfly import BreadCrumb, Tab, TabWithDropdown
-from widgetastic_patternfly4 import Button, Select
+from widgetastic_patternfly4 import Button
 from widgetastic_patternfly4.navigation import Navigation
-from widgetastic_patternfly4.ouia import Dropdown, PatternflyTable
+from widgetastic_patternfly5 import Dropdown as PF5Dropdown
+from widgetastic_patternfly5.ouia import (
+    Dropdown as PF5OUIADropdown,
+    PatternflyTable,
+    Select as PF5OUIASelect,
+)
 
 from airgun.utils import get_widget_by_name, normalize_dict_values
 from airgun.widgets import (
@@ -24,10 +29,10 @@ from airgun.widgets import (
     ItemsList,
     LCESelector,
     Pf4ConfirmationDialog,
-    PF4LCECheckSelector,
-    PF4LCESelector,
-    PF4NavSearch,
     PF4Search,
+    PF5LCECheckSelector,
+    PF5LCESelector,
+    PF5NavSearch,
     ProgressBar,
     ReadOnlyEntry,
     SatFlashMessages,
@@ -42,15 +47,18 @@ class BaseLoggedInView(View):
     """Base view for Satellite pages"""
 
     menu = Navigation("Global")
-    menu_search = PF4NavSearch()
+    menu_search = PF5NavSearch()
     taxonomies = ContextSelector()
     flash = SatFlashMessages()
     validations = ValidationErrors()
     dialog = Pf4ConfirmationDialog()
     logout = Text("//a[@href='/users/logout']")
-    current_user = Dropdown('user-info-dropdown')
-    account_menu = Dropdown('user-info-dropdown')
-    permission_denied = Text('//*[@id="content"]')
+    current_user = PF5OUIADropdown('user-info-dropdown')
+    account_menu = PF5OUIADropdown('user-info-dropdown')
+    permission_denied = Text(
+        '//*[@id="content" or contains(@class, "pf-v5-c-empty-state pf-m-xl")]'
+    )
+    product = Text('//span[@class="navbar-brand-txt"]/span')
 
     def select_logout(self):
         """logout from satellite"""
@@ -89,7 +97,9 @@ class BaseLoggedInView(View):
             '//a[contains(text(), "documentation") or contains(text(), "Documentation") or '
             'contains(@class, "btn-docs") or contains(@href, "console.redhat.com") or '
             'contains(@href, "access.redhat.com") or contains(@href, "docs.redhat.com") or '
-            'contains(@href, "www.redhat.com") or contains(@href, "links")]'
+            'contains(@href, "www.redhat.com") or contains(@href, "links") or '
+            'contains(text(), "Try the Satellite upgrade helper") or '
+            'contains(text(), "Contact support")]'
         )
         doc_links = []
         for item in self.browser.elements(doc_link_elements):
@@ -301,30 +311,38 @@ class LCESelectorGroup(ParametrizedView):
         return self.lce.read()
 
 
-class PF4LCESelectorGroup(LCESelectorGroup):
+class PF5LCESelectorGroup(LCESelectorGroup):
     ROOT = './/div[./div[@class="env-path"]]'
 
     PARAMETERS = ('lce_name',)
 
     LAST_ENV = './/div[@class="env-path"][last()]'
-    lce = PF4LCESelector(
+    lce = PF5LCESelector(
         locator=ParametrizedLocator(
             './/div[@class="env-path" and .//*[contains(normalize-space(.), "{lce_name}")]]'
         )
     )
 
 
-class PF4LCECheckSelectorGroup(PF4LCESelectorGroup):
-    """Checkbox version of PF4 LCE Selector"""
+class PF5LCECheckSelectorGroup(PF5LCESelectorGroup):
+    """Checkbox version of PF5 LCE Selector"""
 
-    lce = PF4LCECheckSelector(
+    lce = PF5LCECheckSelector(
         locator=ParametrizedLocator(
             './/div[@class="env-path" and .//*[contains(normalize-space(.), "{lce_name}")]]'
         )
     )
 
 
-class PF4LCEGroup(ParametrizedLocator):
+# PF5 kebab menu present in table rows
+class TableRowKebabMenu(PF5Dropdown):
+    """Dropdown for PF5 kebab menus used in table rows."""
+
+    ROOT = '.'
+    DEFAULT_LOCATOR = './/button[contains(@class, "-c-menu-toggle") and @aria-label="Kebab toggle"]'
+
+
+class PF5LCEGroup(ParametrizedLocator):
     "Group of LCE indicators"
 
     ROOT = './/td and '
@@ -332,7 +350,7 @@ class PF4LCEGroup(ParametrizedLocator):
     PARAMETERS = ('lce_name',)
 
     LAST_ENV = './/div[@class="env-path"][last()]'
-    lce = PF4LCESelector(
+    lce = PF5LCESelector(
         locator=ParametrizedLocator(
             './/div[@class="env-path" and .//*[contains(normalize-space(.), "{lce_name}")]]'
         )
@@ -446,8 +464,8 @@ class AddRemoveResourcesView(View):
 
 class NewAddRemoveResourcesView(View):
     searchbox = PF4Search()
-    status = Select(locator='.//div[@data-ouia-component-id="select Status"]')
-    remove_button = Dropdown(locator='.//div[@data-ouia-component-id="repositoies-bulk-actions"]')
+    status = PF5OUIASelect(component_id='select Status')
+    remove_button = PF5OUIADropdown(component_id='repositoies-bulk-actions')
     add_button = Button(locator='.//button[@data-ouia-component-id="add-repositories"]')
     table = PatternflyTable(
         component_id='content-view-repositories-table',
@@ -625,9 +643,9 @@ class SearchableViewMixinPF4(SearchableViewMixin):
             return None
         self.searchbox.search(query)
         self.browser.plugin.ensure_page_safe(timeout='60s')
-        self.table.wait_displayed()
         if hasattr(self, 'title'):
             self.title.click()
+        self.table.wait_displayed()
         return self.table.read()
 
 
@@ -656,7 +674,7 @@ class BookmarkCreateView(BaseLoggedInView):
     widgets have special locators.
     """
 
-    ROOT = ".//div[contains(@class, 'modal-dialog')]"
+    ROOT = ".//div[@aria-label='bookmark-modal' or contains(@class, 'modal-dialog')]"
 
     title = Text(
         "//*[self::div[@data-block='modal-header'] or self::h4]"
@@ -665,12 +683,16 @@ class BookmarkCreateView(BaseLoggedInView):
     )
     name = TextInput(name='name')
     query = TextInput(name='query')
-    error_message = Text(".//span[@class='error-message']")
-    public = Checkbox(locator="//input[@type='checkbox'][@name='public' or @name='publik']")
-    # text can be either 'Submit' or 'Save'
-    submit = Text(".//button[@type='submit' or @ng-click='ok()']")
-    # may contain <span> inside, using normalize-space
-    cancel = Text(".//button[normalize-space(.)='Cancel']")
+    error_message = Text(
+        ".//span[@class='error-message' or (ancestor::div[contains(@class, 'pf-m-error')] and contains(@class, 'item-text'))]"
+    )
+    public = Checkbox(
+        locator="//input[@data-ouia-component-id='isPublic-checkbox' or (@type='checkbox' and (@name='public' or @name='publik'))]"
+    )
+    submit = Text(
+        ".//button[@data-ouia-component-id='submit-btn' or @type='submit' or @ng-click='ok()']"
+    )
+    cancel = Text(".//button[@data-ouia-component-id='cancel-btn' or normalize-space(.)='Cancel']")
 
     @property
     def is_displayed(self):

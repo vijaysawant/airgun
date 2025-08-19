@@ -5,12 +5,14 @@ from wait_for import wait_for
 
 from airgun.entities.host import HostEntity
 from airgun.navigation import NavigateStep, navigator
+from airgun.utils import retry_navigation
 from airgun.views.fact import HostFactView
 from airgun.views.host_new import (
     AllAssignedRolesView,
     EditAnsibleRolesView,
     EditSystemPurposeView,
     EnableTracerView,
+    HostsView,
     InstallPackagesView,
     ManageHostCollectionModal,
     ManageHostStatusesView,
@@ -350,12 +352,15 @@ class NewHostEntity(HostEntity):
         view = self.navigate_to(self, 'NewDetails', entity_name=entity_name)
         view.content.packages.wait_displayed()
         view.content.packages.select()
-        view.content.packages.table.wait_displayed()
+        wait_for(lambda: view.content.packages.table.is_displayed, timeout=5)
         view.content.packages.searchbar.fill(search)
-        # wait for filter to apply
         self.browser.plugin.ensure_page_safe()
-        view.content.packages.table.wait_displayed()
-        return view.content.packages.read()
+        # Check if there is a match
+        if view.content.packages.no_matching_packages.is_displayed:
+            return None
+        else:
+            view.content.packages.table.wait_displayed()
+            return view.content.packages.table.read()
 
     def install_package(self, entity_name, package):
         """Installs package on host using the installation modal"""
@@ -369,7 +374,7 @@ class NewHostEntity(HostEntity):
         view.searchbar.fill(package)
         # wait for filter to apply
         self.browser.plugin.ensure_page_safe()
-        view.select_all.click()
+        view.table[0][0].widget.fill(True)
         view.install.click()
 
     def apply_package_action(self, entity_name, package_name, action):
@@ -534,7 +539,8 @@ class NewHostEntity(HostEntity):
         view.wait_displayed()
         view.content.repository_sets.searchbar.fill(repo_set)
         self.browser.plugin.ensure_page_safe()
-        view.content.repository_sets.table[0][6].widget.item_select(action)
+        view.content.repository_sets.table[0][6].widget.click()
+        view.content.repository_sets.repo_set_action.item_select(action)
         view.flash.assert_no_error()
         view.flash.dismiss()
 
@@ -617,6 +623,15 @@ class NewHostEntity(HostEntity):
         view.wait_displayed()
         self.browser.plugin.ensure_page_safe()
         return view.traces.read()
+
+    def get_tracer_tab_title(self, entity_name):
+        view = self.navigate_to(self, 'NewDetails', entity_name=entity_name)
+        view.wait_displayed()
+        self.browser.plugin.ensure_page_safe()
+        view.traces.click()
+        view.wait_displayed()
+        self.browser.plugin.ensure_page_safe()
+        return view.traces.title.text
 
     def get_os_info(self, entity_name):
         view = self.navigate_to(self, 'NewDetails', entity_name=entity_name)
@@ -1011,6 +1026,17 @@ class NewHostEntity(HostEntity):
         view = self.navigate_to(self, 'NewDetails', entity_name=entity_name)
         value = view.ansible.variables.table.row(name=key)['Value'].read()
         return value
+
+
+@navigator.register(HostEntity, 'NewUIAll')
+class ShowAllHosts(NavigateStep):
+    """Navigate to new UI All Hosts page"""
+
+    VIEW = HostsView
+
+    @retry_navigation
+    def step(self, *args, **kwargs):
+        self.view.menu.select('Hosts', 'All Hosts')
 
 
 @navigator.register(NewHostEntity, 'NewDetails')

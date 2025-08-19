@@ -9,6 +9,7 @@ from airgun.helpers.host import HostHelper
 from airgun.navigation import NavigateStep, navigator
 from airgun.utils import retry_navigation
 from airgun.views.cloud_insights import CloudInsightsView
+from airgun.views.common import BaseLoggedInView
 from airgun.views.host import (
     HostCreateView,
     HostDetailsView,
@@ -42,7 +43,7 @@ class HostEntity(BaseEntity):
     def create(self, values):
         """Create new host entity"""
         view = self.navigate_to(self, 'New')
-        view.fill(values)
+        wait_for(lambda: view.fill(values), timeout=60)
         self.browser.click(view.submit, ignore_ajax=True)
         self.browser.plugin.ensure_page_safe(timeout='800s')
         host_view = NewHostDetailsView(self.browser)
@@ -138,8 +139,14 @@ class HostEntity(BaseEntity):
         """Delete host from the system"""
         view = self.navigate_to(self, 'All')
         view.search(entity_name)
-        view.table.row(name=entity_name)['Actions'].widget.fill('Delete')
+        view.table.row(name=entity_name)[6].widget.item_select('Delete')
         self.browser.handle_alert()
+        wait_for(
+            lambda: view.flash.assert_message(
+                [f'Success alert: Successfully deleted {entity_name}.']
+            ),
+            timeout=120,
+        )
         view.flash.assert_no_error()
         view.flash.dismiss()
 
@@ -426,16 +433,27 @@ class HostEntity(BaseEntity):
         view.wait_displayed()
         return view.displayed_table_header_names
 
+    def permission_denied(self):
+        """Return permission denied error text"""
+        view = BaseLoggedInView(self.browser)
+        return view.permission_denied.text
+
 
 @navigator.register(HostEntity, 'All')
 class ShowAllHosts(NavigateStep):
-    """Navigate to All Hosts page"""
+    """Navigate to legacy All Hosts page.
+    Note: Due to incomplete implementation of the new Hosts page in `airgun.views.host_new.HostsView`,
+    'All' currently navigates to the legacy UI for proper test functionality.
+    Once all functionality is covered, feel free to remove this navigation step and rename 'NewUIAll' step to 'All'.
+    """
 
     VIEW = HostsView
 
+    prerequisite = NavigateToSibling('NewUIAll')
+
     @retry_navigation
     def step(self, *args, **kwargs):
-        self.view.menu.select('Hosts', 'All Hosts')
+        self.view.actions.item_select('Legacy UI')
 
 
 @navigator.register(HostEntity, 'New')
@@ -504,7 +522,7 @@ class EditHost(NavigateStep):
     def step(self, *args, **kwargs):
         entity_name = kwargs.get('entity_name')
         self.parent.search(entity_name)
-        self.parent.table.row(name=entity_name)['Actions'].widget.fill('Edit')
+        self.parent.table.row(name=entity_name)[6].widget.item_select('Edit')
         self.view.wait_displayed()
 
 

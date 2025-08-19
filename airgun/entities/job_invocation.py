@@ -1,7 +1,6 @@
 import time
 
 from navmazing import NavigateToSibling
-from selenium.webdriver.common.by import By
 from wait_for import wait_for
 
 from airgun.entities.base import BaseEntity
@@ -63,9 +62,10 @@ class JobInvocationEntity(BaseEntity):
         time.sleep(3)
         view = JobInvocationCreateView(self.browser)
         time.sleep(3)
-        element = self.browser.selenium.find_element(By.XPATH, '//div/input')
-        read_values = view.category_and_template.read()
-        read_values['job_template'] = element.get_attribute('value')
+        read_values = {
+            'job_category': view.category_and_template.job_category.read(),
+            'job_template': view.category_and_template.job_template_text_input.read(),
+        }
         return read_values
 
     def get_targeted_hosts(self):
@@ -81,11 +81,11 @@ class JobInvocationEntity(BaseEntity):
         view.fill(
             {
                 'category_and_template.job_category': 'Commands',
-                'category_and_template.job_template': 'Run Command - Script Default',
+                'category_and_template.job_template_text_input': 'Run Command - Script Default',
                 'target_hosts_and_inputs.targetting_type': 'Host groups',
             }
         )
-        return view.target_hosts_and_inputs.targets.items
+        return view.target_hosts_and_inputs.targets_host_groups.items
 
     def read_dynflow_output(self, entity_name, host_name):
         """Read dynflow console output"""
@@ -93,7 +93,7 @@ class JobInvocationEntity(BaseEntity):
         wait_for(lambda: view.overview.hosts_table.is_displayed, timeout=10)
         view.overview.hosts_table.row(host=host_name)['Actions'].widget.fill('Host task')
         view = TaskDetailsView(self.browser)
-        wait_for(lambda: view.task.dynflow_console.is_displayed, timeout=10)
+        view.wait_for_result()
         view.task.dynflow_console.click()
         self.browser.switch_to_window(self.browser.window_handles[1])
         console = DynflowConsoleView(self.browser)
