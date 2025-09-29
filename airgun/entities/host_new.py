@@ -7,6 +7,7 @@ from airgun.entities.host import HostEntity
 from airgun.navigation import NavigateStep, navigator
 from airgun.utils import retry_navigation
 from airgun.views.fact import HostFactView
+from airgun.views.host import HostsView as LegacyHostsView
 from airgun.views.host_new import (
     AllAssignedRolesView,
     EditAnsibleRolesView,
@@ -44,6 +45,8 @@ def navigate_to_edit_view(func):
 
 
 class NewHostEntity(HostEntity):
+    endpoint_path = '/new/hosts'
+
     def create(self, values):
         """Create new host entity"""
         view = self.navigate_to(self, 'New')
@@ -62,8 +65,6 @@ class NewHostEntity(HostEntity):
         view = self.navigate_to(self, 'NewDetails', entity_name=entity_name)
         view.wait_displayed()
         self.browser.plugin.ensure_page_safe()
-        # Run this read twice to navigate to the page and load it before reading
-        view.read(widget_names=widget_names)
         return view.read(widget_names=widget_names)
 
     def run_bootc_job(self, entity_name, job_name, job_options=None):
@@ -350,7 +351,7 @@ class NewHostEntity(HostEntity):
     def get_packages(self, entity_name, search=""):
         """Filter installed packages on host"""
         view = self.navigate_to(self, 'NewDetails', entity_name=entity_name)
-        view.content.packages.wait_displayed()
+        view.wait_displayed()
         view.content.packages.select()
         wait_for(lambda: view.content.packages.table.is_displayed, timeout=5)
         view.content.packages.searchbar.fill(search)
@@ -915,6 +916,17 @@ class NewHostEntity(HostEntity):
         wait_for(lambda: view.insights.recommendations_table.is_displayed, timeout=10)
         return view.insights.read()
 
+    def get_vulnerabilities(self, entity_name):
+        view = self.navigate_to(self, 'NewDetails', entity_name=entity_name)
+        view.wait_displayed()
+        self.browser.plugin.ensure_page_safe()
+        wait_for(lambda: view.vulnerabilities.vulnerabilities_table.is_displayed, timeout=30)
+        vulnerabilities = getattr(view.vulnerabilities, 'vulnerabilities_table', None)
+        if vulnerabilities is not None:
+            return vulnerabilities.read()
+        else:
+            return []
+
     def remediate_with_insights(
         self, entity_name, recommendation_to_remediate=None, remediate_all=False
     ):
@@ -1027,6 +1039,15 @@ class NewHostEntity(HostEntity):
         view = self.navigate_to(self, 'NewDetails', entity_name=entity_name)
         value = view.ansible.variables.table.row(name=key)['Value'].read()
         return value
+
+    def show_hosts_legacy_ui(self):
+        """Switch to legacy Hosts UI"""
+        view = self.navigate_to(self, 'NewUIAll')
+        view.actions.item_select('Legacy UI')
+        legacy_view = LegacyHostsView(self.browser)
+        legacy_view.wait_displayed()
+        self.browser.plugin.ensure_page_safe()
+        return legacy_view
 
 
 @navigator.register(HostEntity, 'NewUIAll')
