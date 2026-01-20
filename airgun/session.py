@@ -21,16 +21,16 @@ from airgun.entities.audit import AuditEntity
 from airgun.entities.bookmark import BookmarkEntity
 from airgun.entities.bootc import BootcEntity
 from airgun.entities.capsule import CapsuleEntity
-from airgun.entities.cloud_insights import CloudInsightsEntity
+from airgun.entities.cloud_insights import CloudInsightsEntity, RecommendationsTabEntity
 from airgun.entities.cloud_inventory import CloudInventoryEntity
 from airgun.entities.cloud_vulnerabilities import CloudVulnerabilityEntity
 from airgun.entities.computeprofile import ComputeProfileEntity
 from airgun.entities.computeresource import ComputeResourceEntity
 from airgun.entities.config_report import ConfigReportEntity
 from airgun.entities.configgroup import ConfigGroupEntity
+from airgun.entities.containerimages import ContainerImagesEntity
 from airgun.entities.containerimagetag import ContainerImageTagEntity
 from airgun.entities.contentcredential import ContentCredentialEntity
-from airgun.entities.contenthost import ContentHostEntity
 from airgun.entities.contentview import ContentViewEntity
 from airgun.entities.contentview_new import NewContentViewEntity
 from airgun.entities.contentviewfilter import ContentViewFilterEntity
@@ -262,7 +262,7 @@ class Session:
                 endpoint = self._url
             else:
                 endpoint = getattr(entity, 'endpoint_path', '/')
-            full_url = f"https://{self._hostname}{endpoint}"
+            full_url = f'https://{self._hostname}{endpoint}'
             self._prepare_browser(full_url)
 
         return entity(self.browser)
@@ -396,6 +396,11 @@ class Session:
         return self._open(CloudInventoryEntity)
 
     @cached_property
+    def recommendationstab(self):
+        """Instance of Recommendations entity."""
+        return self._open(RecommendationsTabEntity)
+
+    @cached_property
     def cloudinsights(self):
         """Instance of Insights entity."""
         return self._open(CloudInsightsEntity)
@@ -421,6 +426,11 @@ class Session:
         return self._open(ConfigReportEntity)
 
     @cached_property
+    def containerimages(self):
+        """Instance of Container Images entity."""
+        return self._open(ContainerImagesEntity)
+
+    @cached_property
     def containerimagetag(self):
         """Instance of Container Image Tags entity."""
         return self._open(ContainerImageTagEntity)
@@ -429,11 +439,6 @@ class Session:
     def contentcredential(self):
         """Instance of Content Credential entity."""
         return self._open(ContentCredentialEntity)
-
-    @cached_property
-    def contenthost(self):
-        """Instance of Content Host entity."""
-        return self._open(ContentHostEntity)
 
     @cached_property
     def computeresource(self):

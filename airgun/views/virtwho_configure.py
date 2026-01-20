@@ -32,18 +32,22 @@ class VirtwhoConfigureStatus(GenericLocatorWidget):
 
     @property
     def status(self):
-        """The attributes for the element is such as:
-        virt-who-config-report-status pficon-ok status-ok
-        virt-who-config-report-status pficon-info status-info
+        """Detect status from PF5 element attributes.
+
+        PF5 classes: pf-v5-c-icon with status modifier classes
         """
         element = self.browser.element(self.STATUS_ICON)
         attrs = self.browser.get_attribute('class', element)
-        if 'status-ok' in attrs:
+
+        # Check for PF5 status patterns
+        if 'pf-m-success' in attrs or 'status-ok' in attrs:
             return 'ok'
-        elif 'status-info' in attrs:
+        elif 'pf-m-info' in attrs or 'status-info' in attrs:
             return 'info'
-        elif 'status-warn' in attrs:
+        elif 'pf-m-warning' in attrs or 'status-warn' in attrs:
             return 'warning'
+        elif 'pf-m-danger' in attrs or 'status-error' in attrs:
+            return 'error'
         else:
             return 'unknown'
 
@@ -79,7 +83,8 @@ class VirtwhoConfiguresDebug(Widget):
     """Return the virtwho configure debug status."""
 
     DEBUG = ".//span[contains(@class,'config-debug')]"
-    STATUS = ".//span[contains(@class,'fa-check')]"
+    # PF5 check icons
+    STATUS = ".//span[contains(@class,'pf-v5-c-icon') and contains(@class,'pf-m-success')]"
 
     @property
     def status(self):
@@ -103,7 +108,8 @@ class VirtwhoConfiguresAHVDebug(Widget):
     """Return the virtwho configure ahv_internal_debug status."""
 
     DEBUG = ".//span[contains(@class,'config-ahv_internal_debug')]"
-    STATUS = ".//span[contains(@class,'fa-check')]"
+    # PF5 check icons
+    STATUS = ".//span[contains(@class,'pf-v5-c-icon') and contains(@class,'pf-m-success')]"
 
     @property
     def status(self):
@@ -256,29 +262,29 @@ class VirtwhoConfigureDetailsView(BaseLoggedInView):
         prism_flavor = Text('.//span[contains(@class,"config-prism_flavor")]')
 
         _label_locator = "//span[contains(@class, '{class_name}')]/../preceding-sibling::div/strong"
-        status_label = Text(_label_locator.format(class_name="config-status"))
-        debug_label = Text(_label_locator.format(class_name="config-debug"))
-        hypervisor_type_label = Text(_label_locator.format(class_name="config-hypervisor_type"))
-        hypervisor_server_label = Text(_label_locator.format(class_name="config-hypervisor_server"))
+        status_label = Text(_label_locator.format(class_name='config-status'))
+        debug_label = Text(_label_locator.format(class_name='config-debug'))
+        hypervisor_type_label = Text(_label_locator.format(class_name='config-hypervisor_type'))
+        hypervisor_server_label = Text(_label_locator.format(class_name='config-hypervisor_server'))
         hypervisor_username_label = Text(
-            _label_locator.format(class_name="config-hypervisor_username")
+            _label_locator.format(class_name='config-hypervisor_username')
         )
-        interval_label = Text(_label_locator.format(class_name="config-interval"))
-        satellite_url_label = Text(_label_locator.format(class_name="config-satellite_url"))
-        hypervisor_id_label = Text(_label_locator.format(class_name="config-hypervisor_id"))
-        filtering_label = Text(_label_locator.format(class_name="config-listing_mode"))
-        filter_hosts_label = Text(_label_locator.format(class_name="config-whitelist"))
+        interval_label = Text(_label_locator.format(class_name='config-interval'))
+        satellite_url_label = Text(_label_locator.format(class_name='config-satellite_url'))
+        hypervisor_id_label = Text(_label_locator.format(class_name='config-hypervisor_id'))
+        filtering_label = Text(_label_locator.format(class_name='config-listing_mode'))
+        filter_hosts_label = Text(_label_locator.format(class_name='config-whitelist'))
         filter_host_parents_label = Text(
-            _label_locator.format(class_name="config-filter_host_parents")
+            _label_locator.format(class_name='config-filter_host_parents')
         )
-        exclude_hosts_label = Text(_label_locator.format(class_name="config-blacklist"))
+        exclude_hosts_label = Text(_label_locator.format(class_name='config-blacklist'))
         exclude_host_parents_label = Text(
-            _label_locator.format(class_name="config-exclude_host_parents")
+            _label_locator.format(class_name='config-exclude_host_parents')
         )
-        proxy_label = Text(_label_locator.format(class_name="config-http_proxy_id"))
-        no_proxy_label = Text(_label_locator.format(class_name="config-no_proxy"))
-        kubeconfig_path_label = Text(_label_locator.format(class_name="config-kubeconfig_path"))
-        prism_flavor_label = Text(_label_locator.format(class_name="config-prism_flavor"))
+        proxy_label = Text(_label_locator.format(class_name='config-http_proxy_id'))
+        no_proxy_label = Text(_label_locator.format(class_name='config-no_proxy'))
+        kubeconfig_path_label = Text(_label_locator.format(class_name='config-kubeconfig_path'))
+        prism_flavor_label = Text(_label_locator.format(class_name='config-prism_flavor'))
 
     @View.nested
     class deploy(SatTab):

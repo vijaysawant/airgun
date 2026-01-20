@@ -7,6 +7,7 @@ from airgun.utils import retry_navigation
 from airgun.views.report_template import (
     ReportTemplateCreateView,
     ReportTemplateDetailsView,
+    ReportTemplateGeneratedView,
     ReportTemplateGenerateView,
     ReportTemplatesView,
 )
@@ -62,7 +63,7 @@ class ReportTemplateEntity(BaseEntity):
         """Check if report template is locked for editing"""
         view = self.navigate_to(self, 'All')
         view.search(entity_name)
-        return "This template is locked for editing." in view.table.row(name=entity_name)[
+        return 'This template is locked for editing.' in view.table.row(name=entity_name)[
             'Locked'
         ].widget.browser.element('.').get_property('innerHTML')
 
@@ -84,13 +85,14 @@ class ReportTemplateEntity(BaseEntity):
         view = self.navigate_to(self, 'Generate', entity_name=entity_name)
         view.fill(values)
         view.submit.click()
-        # wait for the report to be generated
+        view.flash.assert_no_error()
+        view = ReportTemplateGeneratedView(self.browser)
+        view.wait_displayed()
         wait_for(
-            lambda: view.generated.is_displayed,
+            lambda: view.download_button.is_displayed,
             timeout=300,
             delay=1,
         )
-        view.flash.assert_no_error()
         return self.browser.save_downloaded_file()
 
     def schedule(self, entity_name, values={}):

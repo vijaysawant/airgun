@@ -69,14 +69,18 @@ class HostEntity(BaseEntity):
                 view.repository_list_confirm.click()
             view = self.navigate_to(self, 'Register')
             self.browser.plugin.ensure_page_safe()
+            view.wait_displayed()
             view.fill(values)
         if view.general.activation_keys.read():
             self.browser.click(view.generate_command)
             self.browser.plugin.ensure_page_safe()
             view.registration_command.wait_displayed()
         else:
-            view.general.new_activation_key_link.wait_displayed()
-            if view.generate_command.disabled:
+            if view.general.activation_keys.items is None:
+                view.general.new_activation_key_link.wait_displayed()
+            # When full read is set, it can happen, that the AK is not selected,
+            # because there are more AK on the SAT, thus generate button is disabled.
+            if view.generate_command.disabled and not full_read:
                 raise DisabledWidgetError('Generate registration command button is disabled')
         if full_read:
             return view.read()
@@ -143,14 +147,16 @@ class HostEntity(BaseEntity):
         view.search(entity_name)
         view.table.row(name=entity_name)[6].widget.item_select('Delete')
         self.browser.handle_alert()
-        wait_for(
-            lambda: view.flash.assert_message(
-                [f'Success alert: Successfully deleted {entity_name}.']
-            ),
-            timeout=120,
-        )
-        view.flash.assert_no_error()
-        view.flash.dismiss()
+        self.browser.refresh()
+        # Workaround for SAT-38950: Flash message may not appear properly
+        # wait_for(
+        #     lambda: view.flash.assert_message(
+        #         [f'Success alert: Successfully deleted {entity_name}.']
+        #     ),
+        #     timeout=120,
+        # )
+        # view.flash.assert_no_error()
+        # view.flash.dismiss()
 
     def read_hosts_after_search(self, entity_name):
         """read_hosts_after_search"""
@@ -409,7 +415,7 @@ class HostEntity(BaseEntity):
         self.browser.wait_for_element(
             locator=f'//{hostname_element}[@id="{hostname_id}"]', exception=True, visible=True
         )
-        hostname_button = self.browser.selenium.find_elements("id", hostname_id)
+        hostname_button = self.browser.selenium.find_elements('id', hostname_id)
         hostname = hostname_button[0].text
         self.browser.switch_to_main_frame()
         self.browser.switch_to_window(self.browser.window_handles[0])
@@ -568,7 +574,7 @@ class HostsSelectAction(NavigateStep):
                 f'Please provide a valid action name. action_name: "{action_name}" not found.'
             )
         entities_list = kwargs.get('entities_list')
-        if entities_list == "All":
+        if entities_list == 'All':
             self.parent.select_all.fill(True)
         else:
             for entity in entities_list:

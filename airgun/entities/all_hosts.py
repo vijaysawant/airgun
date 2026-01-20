@@ -3,6 +3,7 @@ import contextlib
 
 import anytree
 from widgetastic.exceptions import NoSuchElementException
+from widgetastic_patternfly5 import DropdownItemDisabled
 
 from airgun.entities.base import BaseEntity
 from airgun.navigation import NavigateStep, navigator
@@ -12,6 +13,7 @@ from airgun.views.all_hosts import (
     AllHostsTableView,
     BuildManagementDialog,
     BulkHostDeleteDialog,
+    ChangeHostCollectionsModal,
     ChangeHostsOwnerModal,
     ChangeLocationModal,
     ChangeOrganizationModal,
@@ -22,6 +24,8 @@ from airgun.views.all_hosts import (
     ManageErrataModal,
     ManagePackagesModal,
     ManageRepositorySetsModal,
+    ManageSystemPurposeModal,
+    ManageTracesModal,
 )
 from airgun.views.job_invocation import JobInvocationCreateView
 
@@ -58,7 +62,7 @@ class AllHostsEntity(BaseEntity):
         if delete_modal.is_displayed:
             delete_modal.confirm_delete.click()
         else:
-            raise NoSuchElementException("Delete Modal was not displayed.")
+            raise NoSuchElementException('Delete Modal was not displayed.')
         view = self.navigate_to(self, 'All')
         self.browser.plugin.ensure_page_safe(timeout='5s')
         view.wait_displayed()
@@ -152,18 +156,18 @@ class AllHostsEntity(BaseEntity):
             action_type (str): action type to perform (upgrade, install, remove)
             packages_to_manage (list): list of packages to manage
         """
-        radio_button = getattr(view.select_action, f"{action_type}_packages_radio")
+        radio_button = getattr(view.select_action, f'{action_type}_packages_radio')
         radio_button.fill(True)
         for package in packages_to_manage:
-            clear_search = getattr(view, f"{action_type}_packages").clear_search
+            clear_search = getattr(view, f'{action_type}_packages').clear_search
             if clear_search.is_displayed:
                 clear_search.click()
-            search_input = getattr(view, f"{action_type}_packages").search_input
+            search_input = getattr(view, f'{action_type}_packages').search_input
             search_input.fill(f'name = "{package}"')
             self.browser.wait_for_element(
-                getattr(view, f"{action_type}_packages").table[0][0].widget, exception=False
+                getattr(view, f'{action_type}_packages').table[0][0].widget, exception=False
             )
-            getattr(view, f"{action_type}_packages").table[0][0].widget.fill(True)
+            getattr(view, f'{action_type}_packages').table[0][0].widget.fill(True)
 
     def manage_packages(
         self,
@@ -196,7 +200,7 @@ class AllHostsEntity(BaseEntity):
 
         if sum([upgrade_packages, install_packages, remove_packages]) != 1:
             raise ValueError(
-                "Only one of the options can be selected: upgrade_packages, install_packages, remove_packages!"
+                'Only one of the options can be selected: upgrade_packages, install_packages, remove_packages!'
             )
 
         selected_packages_options = sum(
@@ -208,7 +212,7 @@ class AllHostsEntity(BaseEntity):
         )
         if selected_packages_options != 1 and not upgrade_all_packages:
             raise ValueError(
-                "Exactly one of the options must be selected: packages_to_upgrade, packages_to_install, packages_to_remove!"
+                'Exactly one of the options must be selected: packages_to_upgrade, packages_to_install, packages_to_remove!'
             )
 
         view = self.all_hosts_navigate_and_select_hosts_helper(host_names, select_all_hosts)
@@ -322,7 +326,7 @@ class AllHostsEntity(BaseEntity):
         # if both erratas_to_apply_by_id and individual_search_queries are specified, raise an error
         if erratas_to_apply_by_id is not None and individual_search_queries is not None:
             raise ValueError(
-                "Cannot specify both erratas_to_apply_by_id and individual_search_queries at the same time!"
+                'Cannot specify both erratas_to_apply_by_id and individual_search_queries at the same time!'
             )
 
         # if erratas_to_apply_by_id is specified, make sure it is a list
@@ -356,7 +360,7 @@ class AllHostsEntity(BaseEntity):
             view.review.finish_errata_management_btn.click()
         else:
             # In this case "Run job" page is opened on which user can specify job details
-            # Here we just select tu run with prefilled values
+            # Here we just select to run with prefilled values
             view.review.expander.click()
             view.review.manage_via_dropdown.item_select('via customized remote execution')
             view.review.finish_errata_management_btn.click()
@@ -452,7 +456,7 @@ class AllHostsEntity(BaseEntity):
         view.next_btn.click()  # Next button from 'Select repository sets'
         view.next_btn.click()  # Next button from 'Review hosts'
         if view.review.number_of_repository_status_changed.text != str(len(repository_names)):
-            raise Exception("Repository count not matches")
+            raise Exception('Repository count not matches')
         view.review.set_content_overrides.click()
 
     def get_package_and_errata_wizard_review_hosts_text(
@@ -529,13 +533,18 @@ class AllHostsEntity(BaseEntity):
         self.browser.plugin.ensure_page_safe(timeout='5s')
         view.wait_displayed()
 
+        # This step ensures deterministic state of the table
+        # If 'Select none (0)' is disabled, it means nothing is selected, so we can continue
+        with contextlib.suppress(DropdownItemDisabled):
+            view.searchbar_dropdown.item_select('Select none (0)')
+
         if select_all_hosts:
             view.select_all.fill(True)
         else:
             if not isinstance(host_names, list):
                 host_names = [host_names]
             for host_name in host_names:
-                view.search(host_name)
+                view.search(f'name={host_name}')
                 view.table[0][0].widget.fill(True)
 
         return view
@@ -564,7 +573,7 @@ class AllHostsEntity(BaseEntity):
         host_names=None,
         new_organization=None,
         select_all_hosts=False,
-        option="Fix on mismatch",
+        option='Fix on mismatch',
     ):
         """
         Navigate to change organization modal after selecting number of hosts,
@@ -588,16 +597,16 @@ class AllHostsEntity(BaseEntity):
         view = ChangeOrganizationModal(self.browser)
         view.organization_menu.item_select(new_organization)
 
-        if option == "Fix on mismatch":
+        if option == 'Fix on mismatch':
             view.organization_fix_on_mismatch.fill(True)
             view.save_button.click()
 
-        elif option == "Fail on mismatch":
+        elif option == 'Fail on mismatch':
             view.organization_fail_on_mismatch.fill(True)
             view.save_button.click()
 
     def change_associations_location(
-        self, host_names=None, new_location=None, select_all_hosts=False, option="Fix on mismatch"
+        self, host_names=None, new_location=None, select_all_hosts=False, option='Fix on mismatch'
     ):
         """
         Navigate to change location modal after selecting number of hosts,
@@ -621,13 +630,248 @@ class AllHostsEntity(BaseEntity):
         view = ChangeLocationModal(self.browser)
         view.location_menu.item_select(new_location)
 
-        if option == "Fix on mismatch":
+        if option == 'Fix on mismatch':
             view.location_fix_on_mismatch.fill(True)
             view.save_button.click()
 
-        elif option == "Fail on mismatch":
+        elif option == 'Fail on mismatch':
             view.location_fail_on_mismatch.fill(True)
             view.save_button.click()
+        else:
+            raise ValueError(
+                'Option argument is not valid! (fill in "Fix on mismatch" or "Fail on mismatch")'
+            )
+
+    def change_associations_host_collections(
+        self, host_names=None, select_all_hosts=False, host_collections_to_select=None, option='Add'
+    ):
+        """
+        Navigate to change host collections modal after selecting number of hosts,
+        select if user wants to add or remove host collections,
+        select desired host collections and apply changes.
+
+        :param host_names: str with one host or list of hosts to select
+        :param select_all_hosts: select all hosts flag
+        :param host_collections_to_select: str with one host collection or list of host collections to select
+        :param option: str options either 'Add' or 'Remove'
+
+        :return: str alert message text, Host collection has reached its limit message or None if no alert message is displayed
+        """
+
+        if host_collections_to_select is None:
+            raise ValueError(
+                'host_collections_to_select argument is None! Please provide host collection(s) to select!'
+            )
+
+        view = self.all_hosts_navigate_and_select_hosts_helper(host_names, select_all_hosts)
+
+        view.bulk_actions_kebab.click()
+        self.browser.move_to_element(view.bulk_actions_menu.item_element('Change associations'))
+        view.bulk_actions_change_associations_menu.item_select('Host collections')
+
+        view = ChangeHostCollectionsModal(self.browser)
+
+        if option == 'Add':
+            view.add_to_host_collections_radio.fill(True)
+        elif option == 'Remove':
+            view.remove_from_host_collections_radio.fill(True)
+        else:
+            raise ValueError('Option argument is not valid! (fill in "Add" or "Remove")')
+
+        if not isinstance(host_collections_to_select, list):
+            host_collections_to_select = [host_collections_to_select]
+        for host_collection in host_collections_to_select:
+            view.search_input.fill(host_collection)
+            wait_for(lambda: view.table.is_displayed, timeout=10)
+            if view.table[0][0].widget.is_enabled:
+                view.table[0][0].widget.fill(True)
+            else:
+                view.close_btn.click()
+                return (
+                    'Failed to add host to host collection. Host collection has reached its limit.'
+                )
+
+        view.save_btn.click()
+
+        # Instantiate All Hosts view to access the alert message (without navigation)
+        all_hosts_view = AllHostsTableView(self.browser)
+
+        # Wait for and read the alert message
+        self.browser.wait_for_element(all_hosts_view.alert_message, exception=False, timeout=5)
+        if all_hosts_view.alert_message.is_displayed:
+            alert_message_content = all_hosts_view.alert_message.read()
+            all_hosts_view.flash.dismiss()
+            if 'failed' in alert_message_content.lower():
+                view.close_btn.click()
+            return alert_message_content
+        return None
+
+    def read_host_status_icon(self, host_name):
+        """
+        Read the status icon details of a specific host.
+
+        :param host_name: str with the name of the host to read the status icon for
+
+        :return: dict with keys 'status' and 'status_details'
+        """
+
+        view = self.navigate_to(self, 'All')
+        self.browser.plugin.ensure_page_safe(timeout='5s')
+        view.wait_displayed()
+        view.search(f'name={host_name}')
+
+        # Find the status icon directly from the Name column cell
+        name_cell_element = view.table[0]['Name'].__element__()
+        status_button_element = self.browser.element(
+            './/button[contains(@class, "pf-v5-c-button")]', parent=name_cell_element
+        )
+
+        # Get the span.pf-v5-c-icon element which contains the color style
+        icon_span_element = self.browser.element(
+            './/span[@class="pf-v5-c-icon"]', parent=status_button_element
+        )
+
+        # Get the status of the icon from the style attribute
+        icon_style = icon_span_element.get_attribute('style')
+        # Extract status from style (e.g., "color: var(--pf-v5-global--success-color--100);")
+        possible_statuses = ['success', 'danger', 'warning']
+        icon_status = None
+
+        for possible_status in possible_statuses:
+            if possible_status in icon_style:
+                icon_status = possible_status
+                break
+
+        # Click on the status button to open the popover
+        status_button_element.click()
+        self.browser.wait_for_element(view.popover_body, exception=False, timeout=5)
+
+        status_details = view.popover_body.read()
+
+        view.popover_close_button.click()
+
+        return {'status': icon_status, 'status_details': status_details}
+
+    def manage_traces(
+        self,
+        host_names=None,
+        select_all_hosts=False,
+        traces_to_select=None,
+    ):
+        """
+        This function allows to manage traces for selected hosts through the All Hosts page.
+
+        :param host_names: str with one host or list of hosts to select
+        :param select_all_hosts: bool, if True, all hosts will be selected
+        :param traces_to_select: str with one trace or list of traces to select
+        """
+        if traces_to_select is None:
+            raise ValueError('traces_to_select argument is None! Please provide traces to select!')
+
+        view = self.all_hosts_navigate_and_select_hosts_helper(host_names, select_all_hosts)
+
+        view.bulk_actions_kebab.click()
+        view.bulk_actions_menu.item_select('Manage traces')
+
+        view = ManageTracesModal(self.browser)
+
+        if not isinstance(traces_to_select, list):
+            traces_to_select = [traces_to_select]
+        for trace in traces_to_select:
+            view.search_input.fill(f'application="{trace}"')
+            wait_for(lambda: view.table.is_displayed, timeout=10)
+            row_count = view.table.row_count
+            if row_count == 1:
+                view.table[0][0].widget.fill(True)
+            else:
+                # Select page
+                view.searchbar_dropdown.item_select(view.searchbar_dropdown.items[-2])
+
+        view.restart_btn.click()
+
+        # Instantiate All Hosts view to access the toast alert (without navigation)
+        all_hosts_view = AllHostsTableView(self.browser)
+
+        # Wait for and read the toast alert message
+        self.browser.wait_for_element(all_hosts_view.alert_message, exception=False, timeout=5)
+        if all_hosts_view.alert_message.is_displayed:
+            alert_message_content = all_hosts_view.alert_message.read()
+            all_hosts_view.flash.dismiss()
+            return alert_message_content
+        return None
+
+    def manage_system_purpose(
+        self,
+        host_names=None,
+        select_all_hosts=False,
+        role=None,
+        usage=None,
+        service_level=None,
+        release_version=None,
+    ):
+        """
+        This function allows changing system purpose attributes for selected hosts
+        through the All Hosts page.
+
+        :param host_names: str with one host or list of hosts to select
+        :param select_all_hosts: bool, if True, all hosts will be selected
+        :param role: str, system purpose role (e.g., 'Red Hat Enterprise Linux Server')
+                     Use 'No change' to keep current values (this is the default in the UI)
+                     Use '(unset)' to explicitly unset the value
+        :param usage: str, system purpose usage (e.g., 'Production', 'Development/Test')
+                      Use 'No change' to keep current values (this is the default in the UI)
+                      Use '(unset)' to explicitly unset the value
+        :param service_level: str, service level agreement (e.g., 'Premium', 'Standard')
+                             Use 'No change' to keep current values (this is the default in the UI)
+                             Use '(unset)' to explicitly unset the value
+        :param release_version: str, release version
+                               Use 'No change' to keep current values (this is the default in the UI)
+                               Use '(unset)' to explicitly unset the value
+        :return: str, alert message content or None
+        """
+        view = self.all_hosts_navigate_and_select_hosts_helper(host_names, select_all_hosts)
+
+        view.bulk_actions_kebab.click()
+        self.browser.move_to_element(view.bulk_actions_menu.item_element('Manage content'))
+        view.bulk_actions_manage_content_menu.item_select('System purpose')
+
+        view = ManageSystemPurposeModal(self.browser)
+
+        # Fill system purpose fields
+        fields_to_fill = {}
+        if role is not None:
+            fields_to_fill['role_select'] = role
+        if usage is not None:
+            fields_to_fill['usage_select'] = usage
+        if service_level is not None:
+            fields_to_fill['sla_select'] = service_level
+        if release_version is not None:
+            fields_to_fill['release_select'] = release_version
+
+        if fields_to_fill:
+            view.fill(fields_to_fill)
+
+        view.save_btn.click()
+
+        # Instantiate All Hosts view to access the toast alert (without navigation)
+        all_hosts_view = AllHostsTableView(self.browser)
+
+        # Wait for and read the toast alert message
+        self.browser.wait_for_element(all_hosts_view.alert_message, exception=False, timeout=5)
+        if all_hosts_view.alert_message.is_displayed:
+            alert_message_content = all_hosts_view.alert_message.read()
+            all_hosts_view.flash.dismiss()
+            return alert_message_content
+        return None
+
+    def export(self):
+        """Export hosts list.
+
+        :return str: path to saved file
+        """
+        view = self.navigate_to(self, 'All')
+        view.export.click()
+        return self.browser.save_downloaded_file()
 
 
 @navigator.register(AllHostsEntity, 'All')

@@ -6,6 +6,7 @@ from wait_for import wait_for
 from airgun.entities.host import HostEntity
 from airgun.navigation import NavigateStep, navigator
 from airgun.utils import retry_navigation
+from airgun.views.cloud_insights import RemediateSummary
 from airgun.views.fact import HostFactView
 from airgun.views.host import HostsView as LegacyHostsView
 from airgun.views.host_new import (
@@ -23,7 +24,7 @@ from airgun.views.host_new import (
     RemediationView,
 )
 from airgun.views.hostgroup import HostGroupEditView
-from airgun.views.job_invocation import JobInvocationCreateView
+from airgun.views.job_invocation import JobInvocationCreateView, JobInvocationStatusView
 
 available_param_types = ['string', 'boolean', 'integer', 'real', 'array', 'hash', 'yaml', 'json']
 
@@ -59,13 +60,19 @@ class NewHostEntity(HostEntity):
         host_view.flash.dismiss()
 
     def get_details(self, entity_name, widget_names=None):
-        """Read host values from Host Details page, optionally only the widgets in widget_names
-        will be read.
-        """
+        """Read host values from Host Details page, optionally only the widgets in widget_names will be read."""
         view = self.navigate_to(self, 'NewDetails', entity_name=entity_name)
         view.wait_displayed()
         self.browser.plugin.ensure_page_safe()
         return view.read(widget_names=widget_names)
+
+    def delete(self, entity_name, cancel=False):
+        """Delete host from the system"""
+        view = self.navigate_to(self, 'NewUIAll')
+        view.search(entity_name)
+        view.table.row(name=entity_name)[6].widget.item_select('Delete')
+        self.browser.handle_alert()
+        self.browser.refresh()
 
     def run_bootc_job(self, entity_name, job_name, job_options=None):
         """Navigate to the Host Details UI, and run a specified job from the link on the bootc card."""
@@ -97,7 +104,7 @@ class NewHostEntity(HostEntity):
         host_group_view.ansible_roles.select_pages.click()
         role_list = self.browser.elements(host_group_view.ansible_roles.available_role, parent=self)
         for single_role in role_list[1:]:
-            if single_role.text.split(". ")[1] == role_name:
+            if single_role.text.split('. ')[1] == role_name:
                 single_role.click()
 
     @navigate_to_edit_view
@@ -111,7 +118,7 @@ class NewHostEntity(HostEntity):
         host_group_view = HostGroupEditView(self.browser)
         role_list = self.browser.elements(host_group_view.ansible_roles.assigned_role, parent=self)
         for single_role in role_list[1:]:
-            if single_role.text.split(". ")[1] == role_name:
+            if single_role.text.split('. ')[1] == role_name:
                 single_role.click()
 
     @navigate_to_edit_view
@@ -241,7 +248,7 @@ class NewHostEntity(HostEntity):
                 if not host_collection_name:
                     raise ValueError('host_collection_name list is empty!')
                 for host_col in host_collection_name:
-                    view.searchbar.fill("name = " + host_col, enter_timeout=2)
+                    view.searchbar.fill('name = ' + host_col, enter_timeout=2)
                     view.wait_displayed()
                     self.browser.plugin.ensure_page_safe()
                     if view.host_collection_table.row_count == 0:
@@ -250,7 +257,7 @@ class NewHostEntity(HostEntity):
                     # Select the host collection via checkbox in the table
                     view.host_collection_table[0][0].widget.click()
             else:
-                view.searchbar.fill("name = " + host_collection_name, enter_timeout=2)
+                view.searchbar.fill('name = ' + host_collection_name, enter_timeout=2)
                 view.wait_displayed()
                 self.browser.plugin.ensure_page_safe()
                 if view.host_collection_table.row_count == 0:
@@ -306,7 +313,7 @@ class NewHostEntity(HostEntity):
                 if not host_collection_name:
                     raise ValueError('host_collection_name list is empty!')
                 for host_col in host_collection_name:
-                    view.searchbar.fill("name = " + host_col, enter_timeout=2)
+                    view.searchbar.fill('name = ' + host_col, enter_timeout=2)
                     view.wait_displayed()
                     self.browser.plugin.ensure_page_safe()
                     if not view.host_collection_table.is_displayed:
@@ -315,7 +322,7 @@ class NewHostEntity(HostEntity):
                     # Select the host collection via checkbox in the table
                     view.host_collection_table[0][0].widget.click()
             else:
-                view.searchbar.fill("name = " + host_collection_name, enter_timeout=2)
+                view.searchbar.fill('name = ' + host_collection_name, enter_timeout=2)
                 view.wait_displayed()
                 self.browser.plugin.ensure_page_safe()
                 if not view.host_collection_table.is_displayed:
@@ -348,10 +355,11 @@ class NewHostEntity(HostEntity):
         view.run_job.click()
         view.select.click()
 
-    def get_packages(self, entity_name, search=""):
+    def get_packages(self, entity_name, search=''):
         """Filter installed packages on host"""
         view = self.navigate_to(self, 'NewDetails', entity_name=entity_name)
         view.wait_displayed()
+        wait_for(lambda: view.content.packages.is_displayed, timeout=5)
         view.content.packages.select()
         wait_for(lambda: view.content.packages.table.is_displayed, timeout=5)
         view.content.packages.searchbar.fill(search)
@@ -361,6 +369,7 @@ class NewHostEntity(HostEntity):
             return None
         else:
             view.content.packages.table.wait_displayed()
+            wait_for(lambda: view.content.packages.table.is_displayed, timeout=5)
             return view.content.packages.table.read()
 
     def install_package(self, entity_name, package):
@@ -438,7 +447,7 @@ class NewHostEntity(HostEntity):
         view.content.errata.type_filter.fill(type)
         self.browser.plugin.ensure_page_safe()
         view.content.errata.table.wait_displayed()
-        return view.read(widget_names="content.errata.table")
+        return view.read(widget_names='content.errata.table')
 
     def get_errata_type_counts(self, entity_name):
         """
@@ -926,6 +935,55 @@ class NewHostEntity(HostEntity):
             return vulnerabilities.read()
         else:
             return []
+
+    def get_recommendations(self, entity_name):
+        view = self.navigate_to(self, 'NewDetails', entity_name=entity_name)
+        view.wait_displayed()
+        self.browser.plugin.ensure_page_safe()
+        wait_for(lambda: view.iop_recommendations.recommendations_table.is_displayed, timeout=30)
+        return view.iop_recommendations.recommendations_table.read()
+
+    def remediate_host_recommendation(self, entity_name, recommendation):
+        """Function that can remediate an iop recommendation from the host page"""
+        view = self.navigate_to(self, 'NewDetails', entity_name=entity_name)
+        view.wait_displayed()
+        self.browser.plugin.ensure_page_safe()
+        wait_for(lambda: view.iop_recommendations.is_displayed, timeout=30)
+        view.iop_recommendations.search_field.fill(recommendation)
+        wait_for(lambda: view.iop_recommendations.recommendations_table.is_displayed, timeout=30)
+        wait_for(
+            lambda: view.iop_recommendations.recommendations_table.row(description=recommendation),
+            handle_exception=True,
+            timeout=30,
+        )
+        row = view.iop_recommendations.recommendations_table.row(description=recommendation)
+        row[1].widget.fill(True)
+        view.iop_recommendations.remediate.wait_displayed()
+        view.iop_recommendations.remediate.click()
+        self.browser.plugin.ensure_page_safe(timeout='30s')
+        modal = RemediateSummary(self.browser)
+        wait_for(lambda: modal.is_displayed, handle_exception=True, timeout=20)
+        modal.remediate.click()
+        view = JobInvocationStatusView(view.browser)
+        view.wait_for_result()
+        return view.read()
+
+    def bulk_remediate_host_recommendation(self, entity_name):
+        """Function that can bulk remediate an iop recommendation from the host page"""
+        view = self.navigate_to(self, 'NewDetails', entity_name=entity_name)
+        view.wait_displayed()
+        self.browser.plugin.ensure_page_safe()
+        wait_for(lambda: view.iop_recommendations.is_displayed, timeout=30)
+        view.iop_recommendations.bulk_select.select_all()
+        view.iop_recommendations.remediate.wait_displayed()
+        view.iop_recommendations.remediate.click()
+        self.browser.plugin.ensure_page_safe(timeout='30s')
+        modal = RemediateSummary(self.browser)
+        wait_for(lambda: modal.is_displayed, handle_exception=True, timeout=20)
+        modal.remediate.click()
+        view = JobInvocationStatusView(view.browser)
+        view.wait_for_result()
+        return view.read()
 
     def remediate_with_insights(
         self, entity_name, recommendation_to_remediate=None, remediate_all=False

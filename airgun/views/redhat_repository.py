@@ -93,7 +93,7 @@ class AvailableRepositorySetWidget(GenericLocatorWidget):
 
     def read(self):
         """Return the name and label of this repository."""
-        return {"name": self.name, "label": self.label}
+        return {'name': self.name, 'label': self.label}
 
     def enable(self, item):
         """Enable a repository of this repository set.
@@ -113,7 +113,7 @@ class EnabledRepositoryWidget(AvailableRepositorySetWidget):
     """The widget representation of Enabled repository item."""
 
     ITEM = None
-    DISABLE_BUTTON = ".//button"
+    DISABLE_BUTTON = './/button'
 
     def disable(self):
         """Disable this repository."""
@@ -124,7 +124,7 @@ class EnabledRepositoryWidget(AvailableRepositorySetWidget):
 class RepositorySearchCategory(ActionsDropdown):
     """The category search selector, eg: Available, Enabled or Both."""
 
-    button = Text("./button")
+    button = Text('./button')
 
     def fill(self, item):
         """Selects Search Repository Category."""
@@ -135,7 +135,7 @@ class RepositorySearchCategory(ActionsDropdown):
 class RepositorySearchTypes(ActionsDropdown):
     """Repository content types dropdown for repository search."""
 
-    button = Text("./button")
+    button = Text('./button')
 
     def close(self):
         """Closes the dropdown list."""
@@ -218,7 +218,9 @@ class RedHatRepositoriesView(BaseLoggedInView):
     )
     search_types = RepositorySearchTypes(".//div[button[@data-id='formControlsSelectMultiple']]")
     search_by_filter_type = RepositorySearchTypes(".//div[button[@aria-owns='bs-select-2']]")
-    search_clear = Text(".//span[@class = 'fa fa-times']")
+    search_clear = Text(
+        ".//span[contains(@class, 'pf-v5-c-button__icon') or contains(@class, 'pf-v5-c-icon')]"
+    )
     recommended_repos = Text(".//div[contains(@class, 'bootstrap-switch wrapper')]")
 
     @View.nested
@@ -257,7 +259,7 @@ class RedHatRepositoriesView(BaseLoggedInView):
         elif category == 'Enabled':
             return self.enabled.read()
         else:
-            return {"available": self.available.read(), "enabled": self.enabled.read()}
+            return {'available': self.available.read(), 'enabled': self.enabled.read()}
 
     @property
     def is_displayed(self):

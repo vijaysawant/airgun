@@ -16,12 +16,16 @@ from widgetastic_patternfly5 import (
     Dropdown as PF5Dropdown,
     Menu as PF5Menu,
     Modal as PF5Modal,
+    Pagination as PF5Pagination,
     Radio as PF5Radio,
     Select as PF5Select,
 )
 from widgetastic_patternfly5.ouia import (
     Button as PF5OUIAButton,
+    Dropdown as PF5OUIADropdown,
+    FormSelect as PF5OUIAFormSelect,
     PatternflyTable as PF5OUIATable,
+    Text as PF5OUIAText,
 )
 
 from airgun.views.common import (
@@ -41,11 +45,11 @@ class MenuToggleDropdownInTable(PF5Dropdown):
     """
 
     IS_ALWAYS_OPEN = False
-    BUTTON_LOCATOR = ".//button[contains(@class, 'pf-v5-c-menu-toggle')]"
+    BUTTON_LOCATOR = './/button[contains(@class, "pf-v5-c-menu-toggle")]'
     DEFAULT_LOCATOR = (
         './/div[contains(@class, "pf-v5-c-menu") and @data-ouia-component-id="PF5/Dropdown"]'
     )
-    ROOT = f"{BUTTON_LOCATOR}/.."
+    ROOT = f'{BUTTON_LOCATOR}/..'
     ITEMS_LOCATOR = ".//ul[contains(@class, 'pf-v5-c-menu__list')]/li"
     ITEM_LOCATOR = (
         "//*[contains(@class, 'pf-v5-c-menu__item') and .//*[contains(normalize-space(.), {})]]"
@@ -64,8 +68,8 @@ class AllHostsSelect(Select):
 
 class AllHostsMenu(PF5Menu):
     IS_ALWAYS_OPEN = False
-    BUTTON_LOCATOR = ".//button[contains(@class, 'pf-v5-c-menu-toggle')]"
-    ROOT = f"{BUTTON_LOCATOR}/.."
+    BUTTON_LOCATOR = './/button[contains(@class, "pf-v5-c-menu-toggle")]'
+    ROOT = f'{BUTTON_LOCATOR}/..'
 
 
 class CVESelect(Select):
@@ -78,12 +82,14 @@ class CVESelect(Select):
 
 
 class AllHostsTableView(BaseLoggedInView, SearchableViewMixinPF4):
-    title = Text("//h1[normalize-space(.)='Hosts']")
+    title = Text('//h1[normalize-space(.)="Hosts"]')
 
     legacy_kebab = PF5Dropdown(locator='.//div[@id="legacy-ui-kebab"]')
+    export = PF5OUIAButton('export-hosts-button')
     select_all = Checkbox(
         locator='.//input[@data-ouia-component-id="select-all-checkbox-dropdown-toggle-checkbox"]'
     )
+    searchbar_dropdown = PF5OUIADropdown('selection-checkbox')
     top_bulk_actions = MenuToggleDropdownInTable(locator='.//button[@aria-label="plain kebab"]')
     bulk_actions = AllHostsMenu()
     bulk_actions_kebab = Button(locator='.//button[@aria-label="plain kebab"]')
@@ -97,11 +103,11 @@ class AllHostsTableView(BaseLoggedInView, SearchableViewMixinPF4):
         locator='//li[contains(@class, "pf-v5-c-menu__list-item")]//button[span/span[text()="Change associations"]]/following-sibling::div[contains(@class, "pf-v5-c-menu")]'
     )
 
-    table_loading = Text("//h5[normalize-space(.)='Loading']")
-    no_results = Text("//h5[normalize-space(.)='No Results']")
-    manage_columns = PF5Button("Manage columns")
+    table_loading = Text('//h5[normalize-space(.)="Loading"]')
+    no_results = Text('//h5[normalize-space(.)="No Results"]')
+    manage_columns = PF5Button('Manage columns')
     table = PF5OUIATable(
-        component_id='table',
+        component_id='hosts-index-table',
         column_widgets={
             0: Checkbox(locator='.//input[@type="checkbox"]'),
             'Name': Text('./a'),
@@ -109,6 +115,11 @@ class AllHostsTableView(BaseLoggedInView, SearchableViewMixinPF4):
         },
     )
     alert_message = Text('.//div[contains(@class, "pf-v5-c-alert")]')
+
+    # Host status icon and popover widgets
+    status_icon = Text('.//svg[contains(@style, "fill:")]')
+    popover_body = Text('.//div[contains(@class, "pf-v5-c-popover__body")]')
+    popover_close_button = Button(locator='.//div[@class="pf-v5-c-popover__close"]//button')
 
     pagination = Pagination()
 
@@ -360,13 +371,13 @@ class ManagePackagesModal(PF5Modal):
         # it changes based on the selected action but generally it looks the same
         # Returns 'All' or number of packages to manage
         number_of_packages_to_manage = Text(
-            '''.//span[contains(.,"Packages to")]/following-sibling::span/span[@class="pf-v5-c-badge pf-m-read"]'''
+            """.//span[contains(.,"Packages to")]/following-sibling::span/span[@class="pf-v5-c-badge pf-m-read"]"""
         )
 
         edit_selected_packages = Button('.//button[@aria-label="Edit packages list"]')
         # Returns number of hosts to manage
         number_of_hosts_to_manage = Text(
-            '''.//span[contains(.,"Hosts")]/following-sibling::span/span[@class="pf-v5-c-badge pf-m-read"]'''
+            """.//span[contains(.,"Hosts")]/following-sibling::span/span[@class="pf-v5-c-badge pf-m-read"]"""
         )
         edit_selected_hosts = Button('.//button[@aria-label="Edit host selection"]')
         manage_via_dropdown = PF5Dropdown(
@@ -399,7 +410,7 @@ class ManageErrataModal(PF5Modal):
 
     @View.nested
     class select_errata(WizardStepView):
-        wizard_step_name = "Select errata"
+        wizard_step_name = 'Select errata'
         locator_prefix = f'.//div[contains(., "{wizard_step_name}")]/descendant::'
         expander = Text(f'.//button[text()="{wizard_step_name}"]')
         content_text = Text('.//div[@class="pf-v5-c-content"]')
@@ -424,7 +435,7 @@ class ManageErrataModal(PF5Modal):
 
     @View.nested
     class review_hosts(WizardStepView):
-        wizard_step_name = "Review hosts"
+        wizard_step_name = 'Review hosts'
         locator_prefix = f'.//div[contains(., "{wizard_step_name}")]/descendant::'
 
         expander = Text(f'.//button[text()="{wizard_step_name}"]')
@@ -447,7 +458,7 @@ class ManageErrataModal(PF5Modal):
 
     @View.nested
     class review(WizardStepView):
-        wizard_step_name = "Review"
+        wizard_step_name = 'Review'
         expander = Text(f'.//button[text()="{wizard_step_name}"]')
 
         tree_expander_errata = Button(
@@ -458,13 +469,13 @@ class ManageErrataModal(PF5Modal):
         )
 
         number_of_errata_to_manage = Text(
-            '''.//span[contains(.,"Errata to")]/following-sibling::span/span[@class="pf-v5-c-badge pf-m-read"]'''
+            """.//span[contains(.,"Errata to")]/following-sibling::span/span[@class="pf-v5-c-badge pf-m-read"]"""
         )
 
         edit_selected_errata = Button('.//button[@aria-label="Edit errata list"]')
         # Returns number of hosts to manage
         number_of_hosts_to_manage = Text(
-            '''.//span[contains(.,"Hosts")]/following-sibling::span/span[@class="pf-v5-c-badge pf-m-read"]'''
+            """.//span[contains(.,"Hosts")]/following-sibling::span/span[@class="pf-v5-c-badge pf-m-read"]"""
         )
         edit_selected_hosts = Button('.//button[@aria-label="Edit host selection"]')
         manage_via_dropdown = PF5Dropdown(
@@ -486,7 +497,7 @@ class RepositorySetsMenu(PF5Dropdown):
     DEFAULT_LOCATOR = PF5Button(
         locator='//td[@data-label="Status"]/button[contains(@class,"pf-v5-c-menu-toggle")]'
     )
-    ROOT = f"{BUTTON_LOCATOR}/.."
+    ROOT = f'{BUTTON_LOCATOR}/..'
     ITEMS_LOCATOR = ".//ul[contains(@class, 'pf-v5-c-menu__list')]/li"
     ITEM_LOCATOR = (
         '//*[contains(@class, "pf-v5-c-menu__item") and .//*[contains(normalize-space(.), {})]]'
@@ -551,7 +562,7 @@ class ManageRepositorySetsModal(PF5Modal):
 
     @View.nested
     class review_hosts(WizardStepView):
-        wizard_step_name = "Review hosts"
+        wizard_step_name = 'Review hosts'
         locator_prefix = f'.//div[contains(., "{wizard_step_name}")]/descendant::'
 
         expander = Text(f'.//button[text()="{wizard_step_name}"]')
@@ -574,7 +585,7 @@ class ManageRepositorySetsModal(PF5Modal):
 
     @View.nested
     class review(WizardStepView):
-        wizard_step_name = "Review"
+        wizard_step_name = 'Review'
         expander = Text(f'.//button[text()="{wizard_step_name}"]')
 
         number_of_repository_status_changed = Text(
@@ -622,7 +633,7 @@ class MenuToggleSelect(PF5Select):
     DEFAULT_LOCATOR = (
         './/div[contains(@class, "pf-v5-c-menu") and @data-ouia-component-type="PF5/Select"]'
     )
-    ROOT = f"{BUTTON_LOCATOR}/.."
+    ROOT = f'{BUTTON_LOCATOR}/..'
     ITEMS_LOCATOR = ".//ul[contains(@class, 'pf-v5-c-menu__list')]/li"
     ITEM_LOCATOR = (
         "//*[contains(@class, 'pf-v5-c-menu__item') and .//*[contains(normalize-space(.), {})]]"
@@ -702,3 +713,108 @@ class ChangeLocationModal(BaseChangeOrgLocModal):
 
     save_button = PF5OUIAButton('bulk-assign-location-modal-add-button')
     cancel_button = PF5OUIAButton('bulk-assign-location-modal-cancel-button')
+
+
+class ChangeHostCollectionsModal(PF5Modal):
+    """
+    This class represents 'Change host collections' modal that is used to change host collections
+    for one or more hosts
+    """
+
+    OUIA_ID = 'bulk-update-host-collections-modal'
+
+    title = './/h1[@class="pf-v5-c-modal-box__title"]'
+    close_btn = PF5OUIAButton('bulk-update-host-collections-modal-ModalBoxCloseButton')
+    save_btn = PF5OUIAButton('bulk-change-host-collections-modal-save-button')
+    cancel_btn = PF5OUIAButton('bulk-change-host-collections-modal-cancel-button')
+
+    add_to_host_collections_radio = PF5Radio(id='radio-add-action')
+    remove_from_host_collections_radio = PF5Radio(id='radio-remove-action')
+
+    search_input = SearchInput(
+        locator='//div[@id="bulk-update-host-collections-modal"]//input[@aria-label="Search input"]'
+    )
+    table = PF5OUIATable(
+        component_id='table',
+        column_widgets={
+            0: Checkbox(locator='.//input[@type="checkbox"]'),
+            'Host collection': Text('.//td[2]'),
+            'Limit': Text('.//td[3]'),
+            'Description': Text('.//td[4]'),
+        },
+    )
+
+    pagination = PF5Pagination()
+
+    alert_message = PF5Alert(locator='.//div[@data-ouia-component-type="PF5/Alert"][1]')
+
+    @property
+    def is_displayed(self):
+        return self.browser.wait_for_element(self.title, exception=False) is not None
+
+
+class ManageTracesModal(PF5Modal):
+    """
+    This class represents the Manage Traces modal
+    """
+
+    OUIA_ID = 'bulk-manage-traces-modal'
+
+    title = './/h1[@class="pf-v5-c-modal-box__title"]'
+    modal_header_text = PF5OUIAText('bulk-manage-traces-description')
+
+    searchbar_dropdown = PF5OUIADropdown('selection-checkbox')
+    search_input = SearchInput(
+        locator='//div[@id="bulk-manage-traces-modal"]//input[@aria-label="Search input"]'
+    )
+    no_results = Text('//h5[normalize-space(.)="No Results"]')
+
+    modal_alert = PF5Alert(locator='//div[contains(@class, "pf-v5-c-alert pf-m-inline")]')
+
+    table = PF5OUIATable(
+        component_id='table',
+        column_widgets={
+            0: Checkbox(locator='.//input[@type="checkbox"]'),
+            'Type': Text('.//td[2]'),
+            'Application': Text('.//td[3]'),
+            'Helper': Text('.//td[4]'),
+        },
+    )
+
+    items_per_page = Select(locator=".//select[@ng-model='table.params.per_page']")
+    pagination = PF5Pagination()
+
+    close_btn = PF5OUIAButton('bulk-manage-traces-modal-ModalBoxCloseButton')
+    restart_btn = PF5Button(
+        locator='//button[normalize-space(.)="Restart" or normalize-space(.)="Reboot hosts"]'
+    )
+    cancel_btn = PF5OUIAButton('bulk-manage-traces-modal-cancel-button')
+
+    @property
+    def is_displayed(self):
+        return self.browser.wait_for_element(self.title, exception=False) is not None
+
+
+class ManageSystemPurposeModal(PF5Modal):
+    """
+    This class represents the Manage System Purpose modal that is used to change
+    system purpose attributes (role, usage, SLA, release version) for multiple hosts.
+    """
+
+    OUIA_ID = 'bulk-system-purpose-modal'
+
+    title = Text('.//h1[@class="pf-v5-c-modal-box__title"]')
+    description = PF5OUIAText('bulk-system-purpose-description')
+
+    role_select = PF5OUIAFormSelect('bulk-system-purpose-role-select')
+    usage_select = PF5OUIAFormSelect('bulk-system-purpose-usage-select')
+    sla_select = PF5OUIAFormSelect('bulk-system-purpose-sla-select')
+    release_select = PF5OUIAFormSelect('bulk-system-purpose-release-select')
+
+    save_btn = PF5OUIAButton('bulk-system-purpose-modal-save-button')
+    cancel_btn = PF5OUIAButton('bulk-system-purpose-modal-cancel-button')
+    close_btn = PF5OUIAButton('bulk-system-purpose-modal-ModalBoxCloseButton')
+
+    @property
+    def is_displayed(self):
+        return self.browser.wait_for_element(self.title, exception=False) is not None
