@@ -53,6 +53,13 @@ class HostEntity(BaseEntity):
         host_view.flash.assert_no_error()
         host_view.flash.dismiss()
 
+    def get_create_form(self):
+        """Return HostCreateView"""
+        view = self.navigate_to(self, 'New')
+        self.browser.plugin.ensure_page_safe()
+        view.wait_displayed()
+        return view
+
     def get_register_command(self, values=None, full_read=None):
         """Get curl command generated on Register Host page"""
         view = self.navigate_to(self, 'Register')
@@ -70,6 +77,7 @@ class HostEntity(BaseEntity):
             view = self.navigate_to(self, 'Register')
             self.browser.plugin.ensure_page_safe()
             view.wait_displayed()
+            wait_for(lambda: view.general.insecure.is_enabled, timeout=30, delay=1)
             view.fill(values)
         if view.general.activation_keys.read():
             self.browser.click(view.generate_command)
@@ -454,19 +462,11 @@ class HostEntity(BaseEntity):
 
 @navigator.register(HostEntity, 'All')
 class ShowAllHosts(NavigateStep):
-    """Navigate to legacy All Hosts page.
-    Note: Due to incomplete implementation of the new Hosts page in `airgun.views.host_new.HostsView`,
-    'All' currently navigates to the legacy UI for proper test functionality.
-    Once all functionality is covered, feel free to remove this navigation step and rename 'NewUIAll' step to 'All'.
-    """
+    """Navigate to All Hosts page."""
 
     VIEW = HostsView
 
     prerequisite = NavigateToSibling('NewUIAll')
-
-    @retry_navigation
-    def step(self, *args, **kwargs):
-        self.view.actions.item_select('Legacy UI')
 
 
 @navigator.register(HostEntity, 'New')

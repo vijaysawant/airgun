@@ -96,6 +96,9 @@ class AllHostsTableView(BaseLoggedInView, SearchableViewMixinPF4):
     bulk_actions_menu = PF5Menu(
         locator='.//div[@data-ouia-component-id="hosts-index-actions-kebab"]'
     )
+    bulk_actions_manage_vulnerability_analysis_menu = PF5Menu(
+        locator='//li[contains(@class, "pf-v5-c-menu__list-item")]//button[span/span[text()="Manage vulnerability analysis"]]/following-sibling::div[contains(@class, "pf-v5-c-menu")]'
+    )
     bulk_actions_manage_content_menu = PF5Menu(
         locator='//li[contains(@class, "pf-v5-c-menu__list-item")]//button[span/span[text()="Manage content"]]/following-sibling::div[contains(@class, "pf-v5-c-menu")]'
     )
@@ -640,6 +643,25 @@ class MenuToggleSelect(PF5Select):
     )
 
 
+class ChangePowerStateModal(PF5Modal):
+    """
+    This class represents the Change Power State modal
+    which is used to change power state of host/hosts.
+    """
+
+    OUIA_ID = 'bulk-power-state-modal'
+
+    title = './/h1[@class="pf-v5-c-modal-box__title"]'
+    close_btn = PF5OUIAButton('bulk-power-state-modal-ModalBoxCloseButton')
+    apply_btn = PF5OUIAButton('bulk-power-state-apply')
+    cancel_btn = PF5OUIAButton('bulk-power-state-cancel')
+    select_state = MenuToggleSelect()
+
+    @property
+    def is_displayed(self):
+        return self.browser.wait_for_element(self.title, exception=False) is not None
+
+
 class ChangeHostsOwnerModal(PF5Modal):
     """
     This class represents the Change Hosts Owner modal,
@@ -789,6 +811,22 @@ class ManageTracesModal(PF5Modal):
         locator='//button[normalize-space(.)="Restart" or normalize-space(.)="Reboot hosts"]'
     )
     cancel_btn = PF5OUIAButton('bulk-manage-traces-modal-cancel-button')
+
+    @property
+    def is_displayed(self):
+        return self.browser.wait_for_element(self.title, exception=False) is not None
+
+
+class ManageNotificationsModal(PF5Modal):
+    """Modal for enabling/disabling email notification alerts for selected hosts."""
+
+    OUIA_ID = 'bulk-manage-notifications-modal'
+
+    title = './/h1[contains(@class, "pf-v5-c-modal-box__title")]'
+    enable_btn = Button(locator='.//button[normalize-space(.)="Enable"]')
+    disable_btn = Button(locator='.//button[normalize-space(.)="Disable"]')
+    confirm_btn = PF5OUIAButton('bulk-manage-notifications-confirm')
+    cancel_btn = PF5OUIAButton('bulk-manage-notifications-cancel')
 
     @property
     def is_displayed(self):

@@ -193,6 +193,8 @@ class HostInterface(View):
     # Compute resource attributes
     network_type = FilteredDropdown(id='_compute_attributes_type')
     network = FilteredDropdown(id='_compute_attributes_bridge')
+    ocpv_network = FilteredDropdown(id='_compute_attributes_network')
+    cni_provider = FilteredDropdown(id='_compute_attributes_cni_provider')
     nic_type = FilteredDropdown(id='_compute_attributes_model')
 
     def after_fill(self, was_change):
@@ -243,7 +245,7 @@ class HostsView(BaseLoggedInView, SearchableViewMixinPF4):
     )
     displayed_table_headers = './/table/thead/tr/th[not(@hidden)]'
     host_status = "//span[contains(@class, 'host-status')]"
-    actions = ActionsDropdown("//div[@id='submit_multiple']")
+    actions = PF5OUIADropdown(component_id='legacy-ui-kebab')
     dialog = Pf4ConfirmationDialog()
 
     @property
@@ -390,6 +392,39 @@ class HostCreateView(BaseLoggedInView):
             operating_system = FilteredDropdown(id='host_operatingsystem_id')
             image = FilteredDropdown(id='azure_rm_image_id')
             root_password = TextInput(id='host_root_pass')
+
+    @provider_content.register('OpenShift Virtualization')
+    class OCPVResourceForm(View):
+        @View.nested
+        class virtual_machine(SatTab):
+            TAB_NAME = 'Virtual Machine'
+            cpus = TextInput(id='host_compute_attributes_cpu_cores')
+            memory = TextInput(id='host_compute_attributes_memory')
+            startup = Checkbox(id='host_compute_attributes_start')
+
+        @View.nested
+        class storage(SatTab):
+            TAB_NAME = 'Virtual Machine'
+            storage_volumes = Text(
+                "//fieldset[@id='storage_volumes']//a[contains(normalize-space(.), 'Add Volume')]"
+            )
+            storage_class = FilteredDropdown(
+                locator="//span[contains(@id, 'storage_class-container')]"
+            )
+            size = TextInput(
+                locator="(//fieldset[@id='storage_volumes']//input[contains(@id, 'capacity')])[last()]"
+            )
+            bootable = Checkbox(
+                locator="(//fieldset[@id='storage_volumes']//input[contains(@id, 'host_compute_attributes')])[last()]"
+            )
+
+            def before_fill(self, values=None):
+                self.storage_volumes.click()
+
+        @View.nested
+        class operating_system(SatTab):
+            TAB_NAME = 'Operating System'
+            provision_method = Checkbox(id='host_provision_method_image')
 
     @View.nested
     class operating_system(SatTab):

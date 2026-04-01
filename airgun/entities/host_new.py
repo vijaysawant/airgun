@@ -11,6 +11,7 @@ from airgun.views.fact import HostFactView
 from airgun.views.host import HostsView as LegacyHostsView
 from airgun.views.host_new import (
     AllAssignedRolesView,
+    ContainerfileInstallCommandView,
     EditAnsibleRolesView,
     EditSystemPurposeView,
     EnableTracerView,
@@ -18,6 +19,7 @@ from airgun.views.host_new import (
     InstallPackagesView,
     ManageHostCollectionModal,
     ManageHostStatusesView,
+    ManageMultiCVEnvModal,
     ModuleStreamDialog,
     NewHostDetailsView,
     ParameterDeleteDialog,
@@ -69,6 +71,8 @@ class NewHostEntity(HostEntity):
     def delete(self, entity_name, cancel=False):
         """Delete host from the system"""
         view = self.navigate_to(self, 'NewUIAll')
+        view.wait_displayed()
+        self.browser.plugin.ensure_page_safe()
         view.search(entity_name)
         view.table.row(name=entity_name)[6].widget.item_select('Delete')
         self.browser.handle_alert()
@@ -386,6 +390,44 @@ class NewHostEntity(HostEntity):
         self.browser.plugin.ensure_page_safe()
         view.table[0][0].widget.fill(True)
         view.install.click()
+
+    def generate_containerfile_install_command(
+        self, entity_name, package_count, search, unknown_persistence=False
+    ):
+        """
+        Generates containerfile install command for a given set of packages
+        Args:
+            entity_name: Name of the host.
+            package_count: Number of packages you are selecting.
+            search: Search query to filter the package(s) you want to select.
+            unknown_persistence: Whether or not to include packages of unknown persistence value.
+        """
+        view = self.navigate_to(self, 'NewDetails', entity_name=entity_name)
+        view.wait_displayed()
+        wait_for(lambda: view.content.packages.is_displayed, timeout=5)
+        view.content.packages.select()
+        wait_for(lambda: view.content.packages.table.is_displayed, timeout=5)
+        view.content.packages.searchbar.fill(search)
+        self.browser.plugin.ensure_page_safe()
+        view.content.packages.table.wait_displayed()
+        if not view.content.packages.select_all.selected:
+            view.content.packages.select_all.click()
+        view.content.packages.dropdown.wait_displayed()
+        if package_count > 1:
+            view.content.packages.dropdown.item_select(
+                f'Generate containerfile install command ({package_count} packages selected)'
+            )
+        else:
+            view.content.packages.dropdown.item_select(
+                f'Generate containerfile install command ({package_count} package selected)'
+            )
+        view = ContainerfileInstallCommandView(self.browser)
+        view.wait_displayed()
+        if unknown_persistence:
+            view.unknown_persistence.click()
+        widget_values = view.read()
+        view.cancel_button.click()
+        return widget_values
 
     def apply_package_action(self, entity_name, package_name, action):
         """Apply `action` to selected package based on the `package_name`"""
@@ -918,17 +960,8 @@ class NewHostEntity(HostEntity):
         self.browser.plugin.ensure_page_safe()
         return view.reports.read()
 
-    def get_insights(self, entity_name):
-        view = self.navigate_to(self, 'NewDetails', entity_name=entity_name)
-        view.wait_displayed()
-        self.browser.plugin.ensure_page_safe()
-        wait_for(lambda: view.insights.recommendations_table.is_displayed, timeout=10)
-        return view.insights.read()
-
     def get_vulnerabilities(self, entity_name):
         view = self.navigate_to(self, 'NewDetails', entity_name=entity_name)
-        view.wait_displayed()
-        self.browser.plugin.ensure_page_safe()
         wait_for(lambda: view.vulnerabilities.vulnerabilities_table.is_displayed, timeout=30)
         vulnerabilities = getattr(view.vulnerabilities, 'vulnerabilities_table', None)
         if vulnerabilities is not None:
@@ -936,18 +969,21 @@ class NewHostEntity(HostEntity):
         else:
             return []
 
+    def get_insights(self, entity_name):
+        # TODO consolidate with get_recommendations
+        view = self.navigate_to(self, 'NewDetails', entity_name=entity_name)
+        wait_for(lambda: view.insights.recommendations_table.is_displayed, timeout=10)
+        return view.insights.read()
+
     def get_recommendations(self, entity_name):
         view = self.navigate_to(self, 'NewDetails', entity_name=entity_name)
-        view.wait_displayed()
-        self.browser.plugin.ensure_page_safe()
         wait_for(lambda: view.iop_recommendations.recommendations_table.is_displayed, timeout=30)
         return view.iop_recommendations.recommendations_table.read()
 
     def remediate_host_recommendation(self, entity_name, recommendation):
         """Function that can remediate an iop recommendation from the host page"""
         view = self.navigate_to(self, 'NewDetails', entity_name=entity_name)
-        view.wait_displayed()
-        self.browser.plugin.ensure_page_safe()
+
         wait_for(lambda: view.iop_recommendations.is_displayed, timeout=30)
         view.iop_recommendations.search_field.fill(recommendation)
         wait_for(lambda: view.iop_recommendations.recommendations_table.is_displayed, timeout=30)
@@ -956,14 +992,16 @@ class NewHostEntity(HostEntity):
             handle_exception=True,
             timeout=30,
         )
+
         row = view.iop_recommendations.recommendations_table.row(description=recommendation)
         row[1].widget.fill(True)
         view.iop_recommendations.remediate.wait_displayed()
         view.iop_recommendations.remediate.click()
-        self.browser.plugin.ensure_page_safe(timeout='30s')
+
         modal = RemediateSummary(self.browser)
         wait_for(lambda: modal.is_displayed, handle_exception=True, timeout=20)
         modal.remediate.click()
+
         view = JobInvocationStatusView(view.browser)
         view.wait_for_result()
         return view.read()
@@ -971,16 +1009,16 @@ class NewHostEntity(HostEntity):
     def bulk_remediate_host_recommendation(self, entity_name):
         """Function that can bulk remediate an iop recommendation from the host page"""
         view = self.navigate_to(self, 'NewDetails', entity_name=entity_name)
-        view.wait_displayed()
-        self.browser.plugin.ensure_page_safe()
         wait_for(lambda: view.iop_recommendations.is_displayed, timeout=30)
         view.iop_recommendations.bulk_select.select_all()
+
         view.iop_recommendations.remediate.wait_displayed()
         view.iop_recommendations.remediate.click()
-        self.browser.plugin.ensure_page_safe(timeout='30s')
+
         modal = RemediateSummary(self.browser)
         wait_for(lambda: modal.is_displayed, handle_exception=True, timeout=20)
         modal.remediate.click()
+
         view = JobInvocationStatusView(view.browser)
         view.wait_for_result()
         return view.read()
@@ -1003,16 +1041,15 @@ class NewHostEntity(HostEntity):
 
         """
 
-        if ((recommendation_to_remediate is not None) and remediate_all) or (
-            (recommendation_to_remediate is None) and (remediate_all is False)
+        if (recommendation_to_remediate and remediate_all) or (
+            not recommendation_to_remediate and not remediate_all
         ):
             raise ValueError(
                 'Either recommendation_to_remediate or remediate_all must be provided!'
             )
 
         view = self.navigate_to(self, 'NewDetails', entity_name=entity_name)
-        view.wait_displayed()
-        self.browser.plugin.ensure_page_safe()
+
         if remediate_all:
             view.insights.select_all_one_page.click()
             view.insights.select_all_pages.click()
@@ -1029,8 +1066,6 @@ class NewHostEntity(HostEntity):
                     _rec = f'title = "{_rec}"'
                     view.insights.search_bar.fill(_rec, enter_timeout=3)
                     view.wait_displayed()
-                    self.browser.plugin.ensure_page_safe()
-                    time.sleep(3)
                     try:
                         # Click the checkbox of the first recommendation
                         view.insights.recommendations_table[0][0].widget.click()
@@ -1045,8 +1080,6 @@ class NewHostEntity(HostEntity):
                 recommendation_to_remediate = f'title = "{recommendation_to_remediate}"'
                 view.insights.search_bar.fill(recommendation_to_remediate, enter_timeout=3)
                 view.wait_displayed()
-                self.browser.plugin.ensure_page_safe()
-                time.sleep(3)
                 try:
                     # Click the checkbox of the first recommendation
                     view.insights.recommendations_table[0][0].widget.click()
@@ -1107,6 +1140,45 @@ class NewHostEntity(HostEntity):
         self.browser.plugin.ensure_page_safe()
         return legacy_view
 
+    def add_content_view_env(self, entity_name, cv_name, lce_name):
+        view = self.navigate_to(self, 'NewDetails', entity_name=entity_name)
+        view.wait_displayed()
+        view.overview.content_view_details.dropdown.item_select('Assign content view environments')
+        modal = ManageMultiCVEnvModal(self.browser)
+        modal.assign_cv_btn.wait_displayed(timeout=5)
+        modal.assign_cv_btn.click()
+        assignment_section = modal.new_assignment_section(lce_name=lce_name)
+        assignment_section.lce_selector.wait_displayed(timeout=5)
+        assignment_section.lce_selector.click()
+        assignment_section.content_source_select.item_select(cv_name)
+        modal.save_btn.click()
+        wait_for(
+            lambda: not modal.is_displayed,
+            timeout=10,
+            delay=1,
+            handle_exception=True,
+        )
+
+    def switch_associated_cv(self, entity_name, cv_name):
+        view = self.navigate_to(self, 'NewDetails', entity_name=entity_name)
+        view.wait_displayed()
+        view.overview.content_view_details.dropdown.item_select('Assign content view environments')
+        modal = ManageMultiCVEnvModal(self.browser)
+        modal.associated_content_view.item_select(cv_name)
+        modal.save_btn.click()
+        wait_for(
+            lambda: not modal.is_displayed,
+            timeout=10,
+            delay=1,
+            handle_exception=True,
+        )
+
+    def get_content_view_envs(self, entity_name):
+        view = self.navigate_to(self, 'NewDetails', entity_name=entity_name)
+        view.wait_displayed()
+        self.browser.plugin.ensure_page_safe()
+        return view.overview.content_view_details.read()
+
 
 @navigator.register(HostEntity, 'NewUIAll')
 class ShowAllHosts(NavigateStep):
@@ -1130,7 +1202,7 @@ class ShowNewHostDetails(NavigateStep):
     VIEW = NewHostDetailsView
 
     def prerequisite(self, *args, **kwargs):
-        return self.navigate_to(self.obj, 'All')
+        return self.navigate_to(self.obj, 'NewUIAll')
 
     def step(self, *args, **kwargs):
         entity_name = kwargs.get('entity_name')

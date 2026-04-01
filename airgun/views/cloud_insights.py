@@ -17,7 +17,7 @@ from widgetastic_patternfly5.ouia import (
     TextInput as PF5OUIATextInput,
 )
 
-from airgun.views.common import BaseLoggedInView, SearchableViewMixinPF4
+from airgun.views.common import BaseLoggedInView, SearchableViewMixinPF4, TableRowKebabMenu
 
 
 class CloudTokenView(BaseLoggedInView):
@@ -28,7 +28,7 @@ class CloudTokenView(BaseLoggedInView):
 
     @property
     def is_displayed(self):
-        return self.rhcloud_token.wait_displayed()
+        return self.rhcloud_token.is_displayed
 
 
 class RemediationView(PF5OUIAModal):
@@ -49,7 +49,7 @@ class RemediationView(PF5OUIAModal):
 
     @property
     def is_displayed(self):
-        return self.title.wait_displayed()
+        return self.title.is_displayed
 
 
 class CloudInsightsView(BaseLoggedInView, SearchableViewMixinPF4):
@@ -77,7 +77,7 @@ class CloudInsightsView(BaseLoggedInView, SearchableViewMixinPF4):
 
     @property
     def is_displayed(self):
-        return self.browser.wait_for_element(self.title, exception=False) is not None
+        return self.title.is_displayed
 
 
 class BulkSelectMenuToggle(PF5Menu):
@@ -142,13 +142,25 @@ class RemediateSummary(PF5OUIAModal):
     remediate = PF5Button('Remediate')
 
 
+class DisableRecommendationModal(PF5OUIAModal):
+    """"""
+
+    checkbox = Checkbox(locator='.//input[@type="checkbox"]')
+    justification_note = TextInput(locator=".//input[contains(@id, 'disable-rule-justification')]")
+    save = PF5Button('Save')
+    cancel = PF5Button('Cancel')
+
+
 class RecommendationsDetailsView(BaseLoggedInView):
     """Models everything in the recommendations details views execpt the affected system link"""
 
     title = PF5Title('Affected Systems')
+    actions = PF5OUIADropdown('actions')
     clear_button = PF5Button('Reset filters')
     remediate = PF5Button('Remediate')
     download_playbook = PF5Button('Download playbook')
+    enable_recommendation = PF5Button('Enable recommendation')
+    view_systems = PF5Button('View systems')
     search_field = TextInput(locator=('.//input[@aria-label="text input"]'))
     bulk_select = BulkSelectMenuToggle()
     table = PF5Table(
@@ -159,12 +171,13 @@ class RecommendationsDetailsView(BaseLoggedInView):
             'OS': Text('.//span'),
             'Last seen': Text('.//span'),
             'First impacted': Text('.//span'),
+            5: TableRowKebabMenu(),
         },
     )
 
     @property
     def is_displayed(self):
-        return self.browser.wait_for_element(self.table, exception=False) is not None
+        return self.table.is_displayed
 
 
 class RecommendationsTableExpandedRowView(RecommendationsDetailsView):
@@ -194,6 +207,7 @@ class RecommendationsTabView(BaseLoggedInView):
         locator='.//button[@data-ouia-component-id="ConditionalFilterToggle"]'
     )
     menu_filter = MenuToggleSelectParamLocator(locator='.//button[@aria-label="Options menu"]')
+    no_authorized_header = Text('.//h5[contains(@class, "pf-v5-c-empty-state__title-text")]')
     table = PF5ExpandableTable(
         locator='.//table[contains(@data-ouia-component-id, "rules-table")]',
         content_view=RecommendationsTableExpandedRowView,
@@ -204,12 +218,10 @@ class RecommendationsTabView(BaseLoggedInView):
             'Total risk': Text('.//span'),
             'Systems': Text('.//div'),
             'Remediation type': Text('.//span'),
+            7: TableRowKebabMenu(),
         },
     )
 
     @property
     def is_displayed(self):
-        return (
-            self.browser.wait_for_element(self.table, exception=False) is not None
-            and self.browser.wait_for_element(self.clear_button, exception=False) is not None
-        )
+        return self.table.is_displayed and self.clear_button.is_displayed
