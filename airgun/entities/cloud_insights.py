@@ -105,7 +105,7 @@ class RecommendationsTabEntity(BaseEntity):
         """
         # Use navigator to open the Affected Systems details view
         view = self.navigate_to(self, 'Affected Systems', recommendation_name=recommendation_name)
-        wait_for(lambda: view.table.row(), handle_exception=True, timeout=20)
+        wait_for(view.table.row, handle_exception=True, timeout=20)
         time.sleep(5)
         view.bulk_select.select_all()
         view.remediate.click()
@@ -126,9 +126,10 @@ class RecommendationsTabEntity(BaseEntity):
         :example: session.recommendationstab.apply_filter("Status", "Disabled")
         """
         view = self.navigate_to(self, 'All Recommendations')
-
+        # Explicitly navigate to ensure we're on the main recommendations page
+        view.menu.select('Red Hat Lightspeed', 'Recommendations')
         self.browser.plugin.ensure_page_safe(timeout='10s')
-        wait_for(lambda: view.table.is_displayed, timeout=20, handle_exception=True)
+        wait_for(lambda: view.table.is_displayed, timeout=30, handle_exception=True)
         view.clear_button.click()
         view.menu_toggle.fill(filter_type)
         if is_search:
@@ -136,7 +137,7 @@ class RecommendationsTabEntity(BaseEntity):
         else:
             view.menu_filter.fill(filter_value)
         self.browser.plugin.ensure_page_safe(timeout='10s')
-        wait_for(lambda: view.table.is_displayed, timeout=20, handle_exception=True)
+        wait_for(lambda: view.table.is_displayed, timeout=30, handle_exception=True)
         time.sleep(5)
         return view.table.read()
 
